@@ -166,12 +166,16 @@ router.post('/api/auth/login-by-code', loginByCodeLimiter, async (req, res) => {
       [email]
     );
     const row = rows[0];
-    if (!row) return res.status(401).json({ error: '验证码错误或已过期' });
+    if (!row) {
+      console.log('[auth] login-by-code no valid code for', email);
+      return res.status(401).json({ error: '验证码错误或已过期' });
+    }
 
     if (!verifyCode(code, row.code_hash)) {
       const attempts = Number(row.attempts || 0) + 1;
       await authQuery('UPDATE ks_email_codes SET attempts = ?, used = ? WHERE id = ?',
         [attempts, attempts >= CODE_MAX_ATTEMPTS ? 1 : 0, row.id]);
+      console.log('[auth] login-by-code wrong code for', email, 'attempts:', attempts);
       return res.status(401).json({
         error: attempts >= CODE_MAX_ATTEMPTS ? '验证码错误次数过多，请重新获取' : '验证码错误或已过期',
       });

@@ -13,6 +13,7 @@ export default function Login({ onLogin }) {
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const [wallets, setWallets] = useState([])
   const [wcLoading, setWcLoading] = useState(false)
@@ -29,6 +30,7 @@ export default function Login({ onLogin }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setSuccess('')
     setLoading(true)
     try {
       let data
@@ -53,7 +55,7 @@ export default function Login({ onLogin }) {
     setError('')
     try {
       await api.sendCode(identifier)
-      alert('验证码已发送')
+      setSuccess('验证码已发送，请查收邮件')
     } catch (err) {
       setError(err.message)
     } finally {
