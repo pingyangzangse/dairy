@@ -1,6 +1,7 @@
 // 站内通知写入工具：评论、绑定申请等动作触发；写失败只记日志，不影响主流程
 const crypto = require('crypto');
 const { diaryQuery, authQuery } = require('../db');
+const mailer = require('./mailer');
 
 let webpush = null;
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -65,12 +66,32 @@ async function notify({ userId, actorId, type, diaryId = null, excerpt = null })
     );
 
     // 同步尝试浏览器推送：查触发人昵称用于文案
+    let actorName = '有人';
     try {
       const actors = await authQuery('SELECT nick_name, username FROM ks_users WHERE id = ? LIMIT 1', [actorId]);
-      const actorName = (actors[0] && (actors[0].nick_name || actors[0].username)) || '有人';
+      actorName = (actors[0] && (actors[0].nick_name || actors[0].username)) || '有人';
       await pushToUser(userId, actorName, type, diaryId, excerpt ? String(excerpt).slice(0, 80) : null);
     } catch (err) {
       console.error('[notify] 推送异常:', err.message);
+    }
+
+    // 邮件通道（国内可达）：接收人有邮箱且未关闭邮件提醒
+    try {
+      if (!mailer.isConfigured()) return;
+      const settings = await diaryQuery('SELECT email_notify FROM user_settings WHERE user_id = ? LIMIT 1', [userId]);
+      const enabled = settings.length === 0 || settings[0].email_notify === 1;
+      if (!enabled) return;
+      const recipients = await authQuery('SELECT email FROM ks_users WHERE id = ? LIMIT 1', [userId]);
+      const email = recipients[0] && recipients[0].email;
+      if (!email) return;
+      const site = process.env.SITE_URL || 'https://diary.alaric.wiki';
+      const build = PUSH_TEXT[type];
+      if (!build) return;
+      const { title, body } = build(actorName, excerpt ? String(excerpt).slice(0, 80) : null);
+      const link = type === 'comment' && diaryId ? site + '/diaries/' + diaryId : site + '/bind';
+      await mailer.sendNotice(email, '【日记】' + title, [body], link);
+    } catch (err) {
+      console.error('[notify] 邮件提醒失败:', err.message);
     }
   } catch (err) {
     console.error('[notify] 写入通知失败:', err.message);

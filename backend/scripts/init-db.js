@@ -53,6 +53,12 @@ CREATE TABLE IF NOT EXISTS notifications (
   INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS user_settings (
+  user_id VARCHAR(64) PRIMARY KEY,
+  email_notify TINYINT(1) NOT NULL DEFAULT 1 COMMENT '邮件提醒开关',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id VARCHAR(64) PRIMARY KEY,
   user_id VARCHAR(64) NOT NULL,

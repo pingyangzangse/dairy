@@ -18,6 +18,7 @@ export default function Profile({ user, onLogout }) {
   const [notifications, setNotifications] = useState([])
   const [notifExpanded, setNotifExpanded] = useState(false)
   const [pushState, setPushState] = useState('loading')
+  const [emailNotify, setEmailNotify] = useState(true)
   const pendingLinkRef = { current: null }
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function Profile({ user, onLogout }) {
         api.getNotifications().catch(() => ({ notifications: [] })),
       ])
       setProfile(me)
+      setEmailNotify(me.emailNotify !== false)
       setNotifications(notes.notifications || [])
     } catch (err) {
       setError(err.message)
@@ -58,6 +60,19 @@ export default function Profile({ user, onLogout }) {
     }
     if (n.type === 'comment' && n.diary_id) {
       navigate('/diaries/' + n.diary_id)
+    }
+  }
+
+  // 邮件提醒开关（国内可达的提醒通道）
+  async function handleEmailNotifyToggle() {
+    const next = !emailNotify
+    setEmailNotify(next)
+    try {
+      await api.updateSettings({ email_notify: next })
+      setNotice(next ? '已开启邮件提醒' : '已关闭邮件提醒')
+    } catch (err) {
+      setEmailNotify(!next)
+      setError(err.message)
     }
   }
 
@@ -170,7 +185,7 @@ export default function Profile({ user, onLogout }) {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-dvh bg-surface">
       <PageHeader title="个人中心" />
       <div className="px-4 pb-6">
 
@@ -327,6 +342,18 @@ export default function Profile({ user, onLogout }) {
             className={"flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium disabled:opacity-50 " + (pushState === 'on' ? 'bg-stone-100 text-text-sub' : 'bg-primary text-white')}
           >
             {pushState === 'on' ? '关闭' : '开启'}
+          </button>
+        </div>
+        <div className="flex items-center justify-between border-t border-stone-100 mt-3 pt-3">
+          <div className="flex-1 min-w-0 mr-3">
+            <p className="text-sm font-medium text-text-main">邮件提醒</p>
+            <p className="text-xs text-muted mt-0.5">评论与绑定消息发到你绑定的邮箱</p>
+          </div>
+          <button
+            onClick={handleEmailNotifyToggle}
+            className={"flex-shrink-0 w-11 h-6 rounded-full transition-colors relative " + (emailNotify ? 'bg-primary' : 'bg-stone-200')}
+          >
+            <span className={"absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform " + (emailNotify ? 'left-[22px]' : 'left-0.5')} />
           </button>
         </div>
       </div>

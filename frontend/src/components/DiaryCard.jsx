@@ -10,8 +10,16 @@ const visibilityMap = {
   private: { label: '仅自己', color: 'bg-amber-50 text-amber-600' },
 }
 
+function visibilityOf(raw) {
+  const tokens = String(raw || 'public').split(',').map(t => t.trim()).filter(Boolean)
+  const first = tokens[0] || 'public'
+  const base = visibilityMap[first] || visibilityMap.public
+  const label = tokens.map(t => (visibilityMap[t] || {}).label || t).join('·')
+  return { label, color: base.color }
+}
+
 export default function DiaryCard({ diary }) {
-  const v = visibilityMap[diary.visibility] || visibilityMap.public
+  const v = visibilityOf(diary.visibility)
   const images = parseImages(diary.images)
 
   return (

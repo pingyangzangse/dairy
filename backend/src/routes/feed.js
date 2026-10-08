@@ -36,7 +36,7 @@ router.get('/api/feed', defaultLimiter, async (req, res) => {
         params = [userId];
       } else {
         const placeholders = followingIds.map(() => '?').join(',');
-        where = `(author_id = ? OR (author_id IN (${placeholders}) AND visibility = 'public'))`;
+        where = `(author_id = ? OR (author_id IN (${placeholders}) AND FIND_IN_SET('public', visibility)))`;
         params = [userId, ...followingIds];
       }
     } else if (mode === 'partner') {
@@ -58,7 +58,7 @@ router.get('/api/feed', defaultLimiter, async (req, res) => {
       for (const g of ['partner', 'friend', 'family']) {
         if (byGroup[g].length > 0) {
           const ph = byGroup[g].map(() => '?').join(',');
-          conditions.push(`(author_id IN (${ph}) AND visibility IN ('public', '${g}'))`);
+          conditions.push(`(author_id IN (${ph}) AND (FIND_IN_SET('public', visibility) OR FIND_IN_SET('${g}', visibility)))`);
           params.push(...byGroup[g]);
         }
       }
@@ -77,12 +77,12 @@ router.get('/api/feed', defaultLimiter, async (req, res) => {
         const g = groupMap[r.type];
         if (g) byGroup[g].push(other);
       }
-      const conditions = ["visibility = 'public'", 'author_id = ?'];
+      const conditions = ["FIND_IN_SET('public', visibility)", 'author_id = ?'];
       params = [userId];
       for (const g of ['partner', 'friend', 'family']) {
         if (byGroup[g].length > 0) {
           const ph = byGroup[g].map(() => '?').join(',');
-          conditions.push(`(author_id IN (${ph}) AND visibility IN ('public', '${g}'))`);
+          conditions.push(`(author_id IN (${ph}) AND (FIND_IN_SET('public', visibility) OR FIND_IN_SET('${g}', visibility)))`);
           params.push(...byGroup[g]);
         }
       }

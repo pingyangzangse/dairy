@@ -140,7 +140,7 @@ export default function Login({ onLogin }) {
   ]
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col px-6 py-10">
+    <div className="min-h-dvh bg-surface flex flex-col px-6 py-10">
       <div className="flex-1 flex flex-col justify-center">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-semibold text-primary mb-2">日记</h1>

@@ -41,7 +41,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
+      <div className="min-h-dvh flex items-center justify-center bg-surface">
         <div className="text-muted">加载中...</div>
       </div>
     )
@@ -51,7 +51,7 @@ function App() {
 
   return (
     <LoginModalProvider>
-    <div className="min-h-screen bg-surface pb-safe-nav">
+    <div className="min-h-dvh bg-surface pb-safe-nav">
       <Routes>
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/" element={<Feed user={user} />} />

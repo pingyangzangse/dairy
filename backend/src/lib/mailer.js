@@ -53,4 +53,17 @@ async function sendLoginCode(to, code) {
 
 init();
 
-module.exports = { isConfigured, sendLoginCode };
+async function sendNotice(to, title, lines, link) {
+  if (!configured) return;
+  const text = [title, '', ...lines, '', (link ? '查看：' + link : '')].filter(Boolean).join('\n');
+  const html = `
+<div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f2933;background:#ffffff">
+  <h2 style="margin:0 0 16px;font-size:18px;color:#0f766e">日记</h2>
+  <p style="margin:0 0 12px;font-size:15px;font-weight:600">${title}</p>
+  ${lines.map(l => '<p style="margin:0 0 8px;font-size:14px;color:#4b5563">' + l + '</p>').join('')}
+  ${link ? '<p style="margin:16px 0 0"><a href="' + link + '" style="color:#0f766e;font-size:14px">点击查看 →</a></p>' : ''}
+</div>`.trim();
+  await transporter.sendMail({ from: fromAddress(), to, subject: title, text, html });
+}
+
+module.exports = { isConfigured, sendLoginCode, sendNotice };

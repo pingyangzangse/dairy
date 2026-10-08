@@ -15,6 +15,7 @@ router.get('/api/user/me', auth, defaultLimiter, async (req, res) => {
     );
     const user = rows[0];
     if (!user) return res.status(404).json({ error: '用户不存在' });
+    const settings = await diaryQuery('SELECT email_notify FROM user_settings WHERE user_id = ? LIMIT 1', [user.id]);
     res.json({
       id: user.id,
       username: user.username,
@@ -22,6 +23,7 @@ router.get('/api/user/me', auth, defaultLimiter, async (req, res) => {
       email: user.email,
       avatar: user.avatar,
       walletAddress: user.wallet_address,
+      emailNotify: settings.length === 0 ? true : settings[0].email_notify === 1,
     });
   } catch (err) {
     console.error('[api] /user/me error:', err);
@@ -43,6 +45,22 @@ router.patch('/api/user/profile', auth, defaultLimiter, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('[api] /user/profile error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 更新提醒设置（邮件提醒开关）
+router.patch('/api/user/settings', auth, defaultLimiter, async (req, res) => {
+  try {
+    const { email_notify } = req.body;
+    if (email_notify === undefined) return res.status(400).json({ error: '参数错误' });
+    await diaryQuery(
+      'INSERT INTO user_settings (user_id, email_notify) VALUES (?, ?) ON DUPLICATE KEY UPDATE email_notify = VALUES(email_notify)',
+      [req.user.id, email_notify ? 1 : 0]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[api] /user/settings error:', err);
     res.status(500).json({ error: err.message });
   }
 });
