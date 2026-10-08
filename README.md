@@ -1,73 +1,52 @@
-# 日记
+# 日记（Diary）
 
-一个手机优先的亲密关系日记社区。支持伴侣绑定、日记发布（文字 + 图片）、评论、关注和日记广场。
+一个面向情侣/亲密关系的小清新日记网站，支持文字、图片、评论和伴侣绑定。
 
 ## 技术栈
 
-- 后端：Express + mysql2（与 DeepTalk 保持一致）
+- 后端：Node.js + Express + mysql2
 - 前端：Vite + React + Tailwind CSS
-- 认证：复用 DeepTalk 的 ks_users / ks_tokens 表
-- 数据库：阿里云 RDS MySQL（utf8mb4）
+- 认证：复用 DeepTalk 的 ks_users / ks_tokens
+- 数据库：阿里云 RDS MySQL 8.0
 
-## 项目结构
-
-```
-日记/
-├── backend/         # Express 后端
-│   ├── src/
-│   │   ├── index.js
-│   │   ├── db.js
-│   │   ├── lib/
-│   │   └── routes/
-│   └── scripts/init-db.js
-├── frontend/        # React 前端
-│   └── src/
-│       ├── pages/
-│       ├── components/
-│       └── lib/api.js
-```
-
-## 启动方式
-
-### 1. 初始化日记数据库
+## 本地开发
 
 ```bash
+# 1. 后端
 cd backend
+cp .env.example .env
+# 编辑 .env 填入数据库配置
 npm install
-cp .env.example .env   # 填写数据库密码
 npm run init-db
-```
-
-### 2. 启动后端
-
-```bash
-cd backend
 npm run dev
-```
 
-后端默认运行在 http://localhost:3002
-
-### 3. 启动前端
-
-```bash
+# 2. 前端（新终端）
 cd frontend
 npm install
 npm run dev
 ```
 
-前端默认运行在 http://localhost:5173
+浏览器打开 http://localhost:5173/
 
-## 核心功能
+## 部署
 
-- 账号密码登录 / 邮箱验证码登录 / 钱包登录（复用 DeepTalk 认证）
-- 邮箱搜索并发送亲密关系绑定申请（情侣 / 朋友 / 家人）
-- 发布日记，每次可选择公开 / 仅伴侣可见 / 仅自己可见，默认仅伴侣可见
-- 日记广场支持「全部 / 关注 / 伴侣」三种视图
-- 日记详情页支持评论
+### 后端：Render
 
-## 数据库说明
+1. 在 Render 创建 Web Service，选择本 GitHub 仓库
+2. 按 render.yaml 配置，或手动设置：
+   - Build Command: cd backend && npm install
+   - Start Command: cd backend && npm start
+   - 环境变量：参照 backend/.env.example 填写真实值
+3. 在阿里云 RDS 白名单里添加 Render 的出口 IP
+4. 部署完成后复制后端域名，填入前端环境变量
 
-- knowledge：DeepTalk 数据库，共享用户和 Token 表
-- dairy：日记业务数据库（关系、日记、评论、关注）
+### 前端：Vercel
 
-注意：当前配置中日记数据库名为 dairy。如果原意是 diary，请修改 backend/.env 中的 DIARY_DB_NAME。
+1. 在 Vercel 导入本 GitHub 仓库
+2. Root Directory 选择 frontend
+3. Build Command: npm run build
+4. Output Directory: dist
+5. 环境变量：VITE_API_BASE=https://your-backend-domain/api
+6. 部署
+
+> 注意：当前图片上传使用本地磁盘存储，Render 免费实例重启后上传的图片会丢失。正式使用建议接入阿里云 OSS。

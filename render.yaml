@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: diary-backend
+    runtime: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: AUTH_DB_HOST
+        sync: false
+      - key: AUTH_DB_PORT
+        value: "3306"
+      - key: AUTH_DB_USER
+        sync: false
+      - key: AUTH_DB_PASSWORD
+        sync: false
+      - key: AUTH_DB_NAME
+        value: knowledge
+      - key: DIARY_DB_HOST
+        sync: false
+      - key: DIARY_DB_PORT
+        value: "3306"
+      - key: DIARY_DB_USER
+        sync: false
+      - key: DIARY_DB_PASSWORD
+        sync: false
+      - key: DIARY_DB_NAME
+        value: dairy
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: APP_DOMAIN
+        sync: false
+      - key: APP_NAME
+        value: Diary
