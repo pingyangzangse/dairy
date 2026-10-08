@@ -1,3 +1,5 @@
+import { compressImage } from './compressImage'
+
 const API_BASE = ''
 
 function getToken() {
@@ -88,15 +90,18 @@ export const api = {
 
   // Upload
   uploadImage: async (file) => {
+    const compressed = await compressImage(file)
     const formData = new FormData()
-    formData.append('image', file)
+    formData.append('image', compressed)
     const res = await fetch('/api/upload/image', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + getToken() },
       body: formData,
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || '上传失败')
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.error || (res.status === 413 ? '图片太大，请换一张试试' : '上传失败，请稍后再试'))
+    }
     return data
   },
 }
