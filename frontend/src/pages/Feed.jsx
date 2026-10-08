@@ -85,7 +85,7 @@ export default function Feed({ user }) {
             <button
               key={m.key}
               onClick={() => handleModeChange(m.key)}
-              className={"px-4 py-1.5 rounded-full text-sm " + (mode === m.key ? 'bg-primary text-white' : 'bg-white text-text-sub border border-stone-100')}
+              className={"flex-shrink-0 whitespace-nowrap px-4 py-1.5 rounded-full text-sm " + (mode === m.key ? 'bg-primary text-white' : 'bg-white text-text-sub border border-stone-100')}
             >
               {m.label}
             </button>
