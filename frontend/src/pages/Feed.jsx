@@ -18,7 +18,9 @@ export default function Feed({ user }) {
   const modes = [
     { key: 'all', label: '广场' },
     { key: 'following', label: '关注' },
-    { key: 'partner', label: '亲友' },
+    { key: 'friend', label: '朋友' },
+    { key: 'family', label: '家人' },
+    { key: 'partner', label: '伴侣' },
   ]
 
   async function loadData(reset = false) {
@@ -48,7 +50,7 @@ export default function Feed({ user }) {
   }, [mode])
 
   const handleModeChange = (key) => {
-    if ((key === 'following' || key === 'partner') && !user) {
+    if (key !== 'all' && !user) {
       openLoginModal('该功能需要登录后才能使用')
       return
     }
@@ -78,7 +80,7 @@ export default function Feed({ user }) {
           }
         />
         <div className="px-4 pb-3">
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
             {modes.map(m => (
             <button
               key={m.key}

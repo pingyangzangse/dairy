@@ -25,6 +25,7 @@ export default function DiaryDetail({ user }) {
   const [canEdit, setCanEdit] = useState(false)
   const [editsRemaining, setEditsRemaining] = useState(0)
   const [edits, setEdits] = useState([])
+  const [editHint, setEditHint] = useState('')
 
   useEffect(() => {
     loadDiary()
@@ -74,6 +75,16 @@ export default function DiaryDetail({ user }) {
     }
   }
 
+  const handleEditClick = () => {
+    const nth = (diary?.edit_count || 0) + 1
+    const remain = editsRemaining
+    setEditHint(`您正在进行第 ${nth} 次编辑，还有 ${remain} 次编辑机会。`)
+    setTimeout(() => {
+      setEditHint('')
+      navigate('/write?edit=' + diary.id)
+    }, 1400)
+  }
+
   const handleDelete = async () => {
     if (!confirmDelete) {
       setConfirmDelete(true)
@@ -100,23 +111,33 @@ export default function DiaryDetail({ user }) {
       <div className="bg-white px-5 py-6 border-b border-stone-100">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate(-1)} className="text-sm text-text-sub">← 返回</button>
-          {canEdit && (
-            <button
-              onClick={() => navigate('/write?edit=' + diary.id)}
-              className="text-xs px-3 py-1.5 rounded-full border border-primary text-primary mr-2"
-            >
-              编辑{editsRemaining > 0 ? '（还可改 ' + editsRemaining + ' 次）' : ''}
-            </button>
-          )}
-          {user && diary && user.id === diary.author_id && (
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className={"text-xs px-3 py-1.5 rounded-full border disabled:opacity-50 " + (confirmDelete ? 'bg-red-500 text-white border-red-500' : 'text-red-500 border-red-200')}
-            >
-              {deleting ? '删除中...' : (confirmDelete ? '再点一次确认删除' : '删除')}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <div className="relative">
+                <button
+                  onClick={handleEditClick}
+                  className="text-xs px-3 py-1.5 rounded-full bg-primary-light text-primary"
+                >
+                  编辑
+                </button>
+                {editHint && (
+                  <div className="absolute right-0 top-full mt-2 w-52 bg-white text-text-main text-xs leading-relaxed rounded-xl shadow-lg border border-stone-100 px-3 py-2 z-20">
+                    {editHint}
+                    <div className="absolute -top-1 right-4 w-2 h-2 bg-white border-l border-t border-stone-100 rotate-45" />
+                  </div>
+                )}
+              </div>
+            )}
+            {user && diary && user.id === diary.author_id && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className={"text-xs px-3 py-1.5 rounded-full disabled:opacity-50 " + (confirmDelete ? 'bg-red-500 text-white' : 'bg-red-50 text-red-500')}
+              >
+                {deleting ? '删除中...' : (confirmDelete ? '再点一次确认删除' : '删除')}
+              </button>
+            )}
+          </div>
         </div>
         {actionError && <p className="text-xs text-red-500 mb-2">{actionError}</p>}
         <h1 className="text-xl font-semibold text-text-main mb-3">{diary.title}</h1>
