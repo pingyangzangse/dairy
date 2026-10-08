@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { diaryQuery, diaryQueryOne, diaryInsert, authQuery } = require('../db');
 const { auth } = require('../lib/authz');
 const { defaultLimiter } = require('../lib/limits');
+const { notify, NOTIFY_TYPE } = require('../lib/notify');
 
 const router = express.Router();
 
@@ -56,6 +57,14 @@ router.post('/api/diaries/:id/comments', auth, defaultLimiter, async (req, res) 
       [id, req.params.id, req.user.id, content]
     );
 
+    // 给日记作者发评论提醒（自己评论自己不提醒，notify 内部已判）
+    await notify({
+      userId: diary.author_id,
+      actorId: req.user.id,
+      type: NOTIFY_TYPE.COMMENT,
+      diaryId: diary.id,
+      excerpt: String(content).slice(0, 80),
+    });
     const rows = await authQuery(
       'SELECT id, username, nick_name, avatar FROM ks_users WHERE id = ? LIMIT 1',
       [req.user.id]

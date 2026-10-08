@@ -3,9 +3,11 @@ const crypto = require('crypto');
 const { diaryQuery, diaryQueryOne, diaryTransaction, authQuery } = require('../db');
 const { auth } = require('../lib/authz');
 const { defaultLimiter } = require('../lib/limits');
+const { notify, NOTIFY_TYPE } = require('../lib/notify');
 
 const router = express.Router();
 const VALID_TYPES = new Set(['couple', 'friend', 'family']);
+const TYPE_LABEL = { couple: '情侣', friend: '朋友', family: '家人' };
 
 // 查询当前关系状态
 router.get('/api/relationship', auth, defaultLimiter, async (req, res) => {
@@ -56,6 +58,13 @@ router.post('/api/relationship/request', auth, defaultLimiter, async (req, res) 
       );
     });
 
+    await notify({
+      userId: recipient_id,
+      actorId: req.user.id,
+      type: NOTIFY_TYPE.REL_REQUEST,
+      excerpt: TYPE_LABEL[type] || type,
+    });
+
     res.json({ success: true, message: '绑定申请已发送' });
   } catch (err) {
     console.error('[api] /relationship/request error:', err);
@@ -87,6 +96,30 @@ router.get('/api/relationship/pending', auth, defaultLimiter, async (req, res) =
   }
 });
 
+
+// 我发出的申请（待对方处理）
+router.get('/api/relationship/sent', auth, defaultLimiter, async (req, res) => {
+  try {
+    const rels = await diaryQuery(
+      "SELECT * FROM relationships WHERE requester_id = ? AND status = 'pending' ORDER BY created_at DESC",
+      [req.user.id]
+    );
+    const requests = [];
+    for (const r of rels) {
+      const rows = await authQuery(
+        'SELECT id, username, nick_name, avatar FROM ks_users WHERE id = ? LIMIT 1',
+        [r.recipient_id]
+      );
+      const u = rows[0] || {};
+      requests.push({ ...r, username: u.username, nick_name: u.nick_name, avatar: u.avatar });
+    }
+    res.json({ requests });
+  } catch (err) {
+    console.error('[api] /relationship/sent error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 同意 / 拒绝申请
 router.post('/api/relationship/respond', auth, defaultLimiter, async (req, res) => {
   try {
@@ -95,13 +128,13 @@ router.post('/api/relationship/respond', auth, defaultLimiter, async (req, res) 
       return res.status(400).json({ error: '参数错误' });
     }
 
-    await diaryTransaction(async (conn) => {
+    const rel = await diaryTransaction(async (conn) => {
       const [rows] = await conn.query(
         'SELECT * FROM relationships WHERE id = ? AND recipient_id = ? AND status = ? FOR UPDATE',
         [request_id, req.user.id, 'pending']
       );
-      const rel = rows[0];
-      if (!rel) throw new Error('申请不存在或已处理');
+      const found = rows[0];
+      if (!found) throw new Error('申请不存在或已处理');
 
       if (action === 'accept') {
         const [existing] = await conn.query(
@@ -110,14 +143,21 @@ router.post('/api/relationship/respond', auth, defaultLimiter, async (req, res) 
           [req.user.id, req.user.id]
         );
         if (existing.length > 0) throw new Error('你已存在绑定关系');
-      }
-
-      if (action === 'accept') {
         await conn.query('UPDATE relationships SET status = ? WHERE id = ?', ['accepted', request_id]);
       } else {
         await conn.query('DELETE FROM relationships WHERE id = ?', [request_id]);
       }
+      return found;
     });
+
+    if (action === 'accept') {
+      await notify({
+        userId: rel.requester_id,
+        actorId: req.user.id,
+        type: NOTIFY_TYPE.REL_ACCEPTED,
+        excerpt: TYPE_LABEL[rel.type] || rel.type,
+      });
+    }
 
     res.json({ success: true, message: action === 'accept' ? '已同意绑定' : '已拒绝申请' });
   } catch (err) {

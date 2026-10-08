@@ -1,4 +1,20 @@
 // 浏览器钱包插件发现（EIP-6963）与签名工具
+
+// 网络抖动自动重试：仅对网络层错误（无 HTTP 状态码）重试；4xx/5xx 立即抛出
+export async function retryOnNetwork(fn, { retries = 3, delayMs = 2000 } = {}) {
+  let lastErr
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      const isNetwork = !err?.status
+      if (!isNetwork || i === retries - 1) throw err
+      await new Promise(r => setTimeout(r, delayMs))
+    }
+  }
+  throw lastErr
+}
 // 参考 DeepTalk 项目 web/src/utils/wallet.js
 
 // 监听 6963 公告 250ms，window.ethereum 兜底（老钱包不发公告）

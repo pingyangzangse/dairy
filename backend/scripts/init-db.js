@@ -40,6 +40,19 @@ CREATE TABLE IF NOT EXISTS comments (
   INDEX idx_author (author_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL COMMENT '接收人',
+  actor_id VARCHAR(64) NOT NULL COMMENT '触发人',
+  type VARCHAR(32) NOT NULL COMMENT 'comment|relationship_request|relationship_accepted',
+  diary_id VARCHAR(64) DEFAULT NULL,
+  excerpt VARCHAR(256) DEFAULT NULL COMMENT '摘要',
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_read (user_id, is_read),
+  INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS follows (
   id VARCHAR(64) PRIMARY KEY,
   follower_id VARCHAR(64) NOT NULL,

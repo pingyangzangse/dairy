@@ -21,6 +21,7 @@ app.use(require('./routes/diary'));
 app.use(require('./routes/comment'));
 app.use(require('./routes/follow'));
 app.use(require('./routes/feed'));
+app.use(require('./routes/notification'));
 app.use(require('./routes/upload'));
 
 app.get('/api/health', (req, res) => {

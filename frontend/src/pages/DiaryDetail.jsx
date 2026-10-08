@@ -14,6 +14,9 @@ export default function DiaryDetail({ user }) {
   const [commentText, setCommentText] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     loadDiary()
@@ -56,6 +59,23 @@ export default function DiaryDetail({ user }) {
     }
   }
 
+  const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 3000)
+      return
+    }
+    setDeleting(true)
+    setActionError('')
+    try {
+      await api.deleteDiary(id)
+      navigate('/', { replace: true })
+    } catch (err) {
+      setActionError(err.message)
+      setDeleting(false)
+    }
+  }
+
   if (loading) return <div className="min-h-screen flex items-center justify-center text-text-sub">加载中...</div>
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>
   if (!diary) return null
@@ -63,7 +83,19 @@ export default function DiaryDetail({ user }) {
   return (
     <div className="min-h-screen bg-surface">
       <div className="bg-white px-5 py-6 border-b border-stone-100">
-        <button onClick={() => navigate(-1)} className="text-sm text-text-sub mb-4">← 返回</button>
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => navigate(-1)} className="text-sm text-text-sub">← 返回</button>
+          {user && diary && user.id === diary.author_id && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className={"text-xs px-3 py-1.5 rounded-full border disabled:opacity-50 " + (confirmDelete ? 'bg-red-500 text-white border-red-500' : 'text-red-500 border-red-200')}
+            >
+              {deleting ? '删除中...' : (confirmDelete ? '再点一次确认删除' : '删除')}
+            </button>
+          )}
+        </div>
+        {actionError && <p className="text-xs text-red-500 mb-2">{actionError}</p>}
         <h1 className="text-xl font-semibold text-text-main mb-3">{diary.title}</h1>
         <p className="text-sm text-text-sub mb-4">{dayjs(diary.created_at).format('YYYY-MM-DD HH:mm')}</p>
         <div className="text-sm text-text-main leading-relaxed whitespace-pre-line mb-4">{diary.content}</div>

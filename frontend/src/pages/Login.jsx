@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import { discoverWallets, requestAccount, signMessage, connectWalletConnect } from '../lib/wallet'
+import { discoverWallets, requestAccount, signMessage, connectWalletConnect, retryOnNetwork } from '../lib/wallet'
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate()
@@ -18,6 +18,7 @@ export default function Login({ onLogin }) {
   const [wallets, setWallets] = useState([])
   const [wcLoading, setWcLoading] = useState(false)
   const busyRef = useRef(false)
+  const pendingVerifyRef = useRef(null)
 
   useEffect(() => {
     if (mode !== 'wallet') return
@@ -79,13 +80,27 @@ export default function Login({ onLogin }) {
     setError('')
     setLoading(true)
     try {
-      const address = await requestAccount(provider)
-      const { challenge_id, message } = await api.walletChallenge(address)
-      const signature = await signMessage(provider, address, message)
-      const data = await api.walletVerify({ challenge_id, address, signature })
+      let pending = pendingVerifyRef.current
+      if (!pending) {
+        const address = await requestAccount(provider)
+        const { challenge_id, message } = await api.walletChallenge(address)
+        const signature = await signMessage(provider, address, message)
+        pending = { challenge_id, address, signature }
+        pendingVerifyRef.current = pending
+      }
+      // 签名后切回网站时网络可能未恢复：自动重试 3 次，签名 5 分钟内有效
+      const data = await retryOnNetwork(() => api.walletVerify(pending))
+      pendingVerifyRef.current = null
       finishLogin(data)
     } catch (err) {
-      if (err?.code === 4001) return setError('你取消了签名')
+      if (err?.code === 4001) {
+        pendingVerifyRef.current = null
+        return setError('你取消了签名')
+      }
+      if (!err?.status) {
+        return setError('网络异常：签名已保留，网络恢复后再点一次即可完成登录，无需重新签名')
+      }
+      pendingVerifyRef.current = null
       setError(err.message || '钱包登录失败')
     } finally {
       setLoading(false)
@@ -96,13 +111,21 @@ export default function Login({ onLogin }) {
     setError('')
     setWcLoading(true)
     try {
-      const { provider, address } = await connectWalletConnect()
-      const { challenge_id, message } = await api.walletChallenge(address)
-      const signature = await signMessage(provider, address, message)
-      const data = await api.walletVerify({ challenge_id, address, signature })
+      let pending = pendingVerifyRef.current
+      if (!pending) {
+        const { address } = await connectWalletConnect()
+        const { challenge_id, message } = await api.walletChallenge(address)
+        const signature = await signMessage(provider, address, message)
+        pending = { challenge_id, address, signature }
+        pendingVerifyRef.current = pending
+      }
+      const data = await retryOnNetwork(() => api.walletVerify(pending))
+      pendingVerifyRef.current = null
       finishLogin(data)
     } catch (err) {
       if (err?.message?.includes('rejected') || err?.code === 5000) return setError('你取消了连接')
+      if (!err?.status) return setError('网络异常：签名已保留，网络恢复后再点一次即可完成登录，无需重新签名')
+      pendingVerifyRef.current = null
       setError(err.message || '扫码登录失败')
     } finally {
       setWcLoading(false)

@@ -88,6 +88,17 @@ export const api = {
   // Feed
   feed: (mode = 'all', page = 1, pageSize = 10) => request('/api/feed?mode=' + mode + '&page=' + page + '&pageSize=' + pageSize),
 
+  // Diary delete
+  deleteDiary: (id) => request('/api/diaries/' + id, { method: 'DELETE' }),
+
+  // Relationship extra
+  getSentRequests: () => request('/api/relationship/sent'),
+
+  // Notifications
+  getNotifications: () => request('/api/notifications'),
+  getUnreadCount: () => request('/api/notifications/unread-count'),
+  markNotificationsRead: () => request('/api/notifications/read', { method: 'POST' }),
+
   // Upload
   uploadImage: async (file) => {
     const compressed = await compressImage(file)
