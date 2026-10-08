@@ -130,7 +130,6 @@ router.post('/api/auth/send-code', sendCodeEmailLimiter, sendCodeIpDailyLimiter,
     const id = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000);
 
-    await authQuery('UPDATE ks_email_codes SET used = 1 WHERE email = ? AND used = 0', [email]);
     await authQuery(
       'INSERT INTO ks_email_codes (id, email, code_hash, expires_at) VALUES (?, ?, ?, ?)',
       [id, email, hashCode(code), expiresAt]
@@ -159,17 +158,22 @@ router.post('/api/auth/login-by-code', loginByCodeLimiter, async (req, res) => {
     if (!isEmail(email)) return res.status(400).json({ error: '请输入合法的邮箱地址' });
     if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: '验证码为 6 位数字' });
 
+    console.log('[auth] login-by-code request:', email, 'code:', code);
     const rows = await authQuery(
       `SELECT * FROM ks_email_codes
        WHERE email = ? AND used = 0 AND expires_at > NOW()
        ORDER BY created_at DESC LIMIT 1`,
       [email]
     );
+    console.log('[auth] rows found:', rows.length);
     const row = rows[0];
     if (!row) {
       console.log('[auth] login-by-code no valid code for', email);
       return res.status(401).json({ error: '验证码错误或已过期' });
     }
+    console.log('[auth] stored:', row.code_hash, 'expires:', row.expires_at);
+    const salt = row.code_hash.split(String.fromCharCode(36))[0];
+    console.log('[auth] candidate:', hashCode(code, salt));
 
     if (!verifyCode(code, row.code_hash)) {
       const attempts = Number(row.attempts || 0) + 1;
