@@ -56,7 +56,7 @@ npm run dev
 3. 进入 Settings -> Secrets and variables -> Actions -> Repository secrets
 4. 添加 `VITE_API_BASE`，值为 Render 后端地址 + /api，例如：
    ```
-   https://diary-backend-xxx.onrender.com/api
+   https://knowledge-share.alaric.wiki/diary/api
    ```
 5. 推送一次代码触发 Actions，或手动运行工作流
 
