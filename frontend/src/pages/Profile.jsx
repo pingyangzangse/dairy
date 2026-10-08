@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useLoginModal } from '../contexts/LoginModalContext'
-import { requestAccount, signMessage, discoverWallets, createWalletConnectProvider } from '../lib/wallet'
+import { requestAccount, signMessage, discoverWallets, connectWalletConnect } from '../lib/wallet'
 
 export default function Profile({ user, onLogout }) {
   const navigate = useNavigate()
@@ -10,6 +10,8 @@ export default function Profile({ user, onLogout }) {
   const [profile, setProfile] = useState(user)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [confirmUnlink, setConfirmUnlink] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -37,7 +39,7 @@ export default function Profile({ user, onLogout }) {
       const signature = await signMessage(provider, address, message)
       await api.walletLink({ challenge_id, address, signature })
       await loadData()
-      alert('钱包绑定成功')
+      setNotice('钱包绑定成功')
     } catch (err) {
       setError(err.message || '绑定失败')
     } finally {
@@ -49,16 +51,12 @@ export default function Profile({ user, onLogout }) {
     setLoading(true)
     setError('')
     try {
-      const provider = await createWalletConnectProvider()
-      await provider.enable()
-      const accounts = provider.accounts || []
-      const address = accounts[0]
-      if (!address) throw new Error('未能获取钱包地址')
+      const { provider, address } = await connectWalletConnect()
       const { challenge_id, message } = await api.walletChallenge(address)
       const signature = await signMessage(provider, address, message)
       await api.walletLink({ challenge_id, address, signature })
       await loadData()
-      alert('钱包绑定成功')
+      setNotice('钱包绑定成功')
     } catch (err) {
       setError(err.message || '绑定失败')
     } finally {
@@ -67,12 +65,17 @@ export default function Profile({ user, onLogout }) {
   }
 
   async function handleWalletUnlink() {
-    if (!window.confirm('确定要解绑钱包吗？')) return
+    if (!confirmUnlink) {
+      setConfirmUnlink(true)
+      setTimeout(() => setConfirmUnlink(false), 3000)
+      return
+    }
+    setConfirmUnlink(false)
     setLoading(true)
     try {
       await api.walletUnlink()
       await loadData()
-      alert('钱包已解绑')
+      setNotice('钱包已解绑，5 秒后自动隐藏')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -88,7 +91,7 @@ export default function Profile({ user, onLogout }) {
       await api.updateProfile({ avatar: url })
       await loadData()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     }
   }
 
@@ -99,6 +102,7 @@ export default function Profile({ user, onLogout }) {
       <h1 className="text-xl font-semibold text-primary mb-6">个人中心</h1>
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+      {notice && <p className="text-sm text-green-600 bg-green-50 px-3 py-2 rounded-xl mb-4">{notice}</p>}
 
       <div className="bg-white rounded-2xl p-5 border border-stone-100 mb-4">
         <div className="flex items-center gap-4 mb-4">
@@ -128,9 +132,9 @@ export default function Profile({ user, onLogout }) {
               <button
                 onClick={handleWalletUnlink}
                 disabled={loading}
-                className="text-xs text-red-500 px-2 py-1 border border-red-200 rounded-lg disabled:opacity-50"
+                className={"text-xs px-2 py-1 border rounded-lg disabled:opacity-50 " + (confirmUnlink ? 'text-white bg-red-500 border-red-500' : 'text-red-500 border-red-200')}
               >
-                解绑
+                {confirmUnlink ? '再点一次确认解绑' : '解绑'}
               </button>
             </div>
           ) : (

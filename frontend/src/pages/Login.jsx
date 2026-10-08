@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import { discoverWallets, requestAccount, signMessage, createWalletConnectProvider } from '../lib/wallet'
+import { discoverWallets, requestAccount, signMessage, connectWalletConnect } from '../lib/wallet'
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate()
@@ -96,11 +96,7 @@ export default function Login({ onLogin }) {
     setError('')
     setWcLoading(true)
     try {
-      const provider = await createWalletConnectProvider()
-      await provider.enable()
-      const accounts = provider.accounts || []
-      const address = accounts[0]
-      if (!address) throw new Error('未能获取钱包地址')
+      const { provider, address } = await connectWalletConnect()
       const { challenge_id, message } = await api.walletChallenge(address)
       const signature = await signMessage(provider, address, message)
       const data = await api.walletVerify({ challenge_id, address, signature })

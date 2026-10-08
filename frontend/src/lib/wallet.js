@@ -34,12 +34,24 @@ export async function signMessage(provider, address, message) {
   return provider.request({ method: 'personal_sign', params: [hex, address] })
 }
 
-// 手机钱包扫码登录（WalletConnect v2）：懒加载 SDK，点击时才拉取
-// projectId 缺省复用 DeepTalk 项目的 WalletConnect Cloud key，可用 VITE_WC_PROJECT_ID 覆盖
-export async function createWalletConnectProvider() {
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+  ])
+}
+
+function closeWcModal() {
+  // WalletConnect 的二维码弹层是 wcm-modal 自定义元素；超时后主动移除，避免遮罩残留
+  document.querySelector('wcm-modal')?.remove()
+}
+
+// 手机钱包扫码连接（WalletConnect v2）：懒加载 SDK，init+enable 整体超时控制
+// relay.walletconnect.org 在部分网络环境下不可达，SDK 默认无限挂起，这里必须兜底
+export async function connectWalletConnect(timeoutMs = 25000) {
   const projectId = import.meta.env.VITE_WC_PROJECT_ID || '54686c4d1e721a3a2e98256e662509a1'
   const { EthereumProvider } = await import('@walletconnect/ethereum-provider')
-  return EthereumProvider.init({
+  const initPromise = EthereumProvider.init({
     projectId,
     chains: [1],
     showQrModal: true,
@@ -50,6 +62,24 @@ export async function createWalletConnectProvider() {
       icons: []
     }
   })
+  let provider
+  try {
+    provider = await withTimeout(initPromise, timeoutMs, 'WC_INIT_TIMEOUT')
+    await withTimeout(provider.enable(), timeoutMs, 'WC_CONNECT_TIMEOUT')
+  } catch (err) {
+    closeWcModal()
+    try { await provider?.disconnect() } catch {}
+    if (err.message === 'WC_INIT_TIMEOUT' || err.message === 'WC_CONNECT_TIMEOUT') {
+      throw new Error('连接钱包服务超时：当前网络可能无法访问 WalletConnect，请切换网络（或开代理）后重试；也可以用浏览器插件钱包')
+    }
+    throw err
+  }
+  const address = provider.accounts?.[0]
+  if (!address) {
+    closeWcModal()
+    throw new Error('未能获取钱包地址')
+  }
+  return { provider, address }
 }
 
 // 统一钱包登录流程：先发现/连接钱包，再请求后端 challenge，最后签名验证
