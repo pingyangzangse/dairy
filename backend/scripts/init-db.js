@@ -53,6 +53,17 @@ CREATE TABLE IF NOT EXISTS notifications (
   INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL,
+  endpoint TEXT NOT NULL,
+  keys_p256dh VARCHAR(256) NOT NULL,
+  keys_auth VARCHAR(128) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_endpoint (user_id, endpoint(255)),
+  INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS follows (
   id VARCHAR(64) PRIMARY KEY,
   follower_id VARCHAR(64) NOT NULL,

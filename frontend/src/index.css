@@ -27,3 +27,13 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* iPhone 底部小横条（home indicator）安全区适配 */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* 页面底部留白：固定导航高度 + 安全区，防止内容被导航遮挡 */
+.pb-safe-nav {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}

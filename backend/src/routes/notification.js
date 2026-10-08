@@ -53,6 +53,19 @@ router.get('/api/notifications', auth, defaultLimiter, async (req, res) => {
   }
 });
 
+router.post('/api/notifications/:id/read', auth, defaultLimiter, async (req, res) => {
+  try {
+    await diaryQuery(
+      'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[api] /notifications/:id/read error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/api/notifications/read', auth, defaultLimiter, async (req, res) => {
   try {
     await diaryQuery('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0', [req.user.id]);

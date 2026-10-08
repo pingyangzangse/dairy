@@ -4,7 +4,9 @@ import { parseImages } from '../lib/images'
 
 const visibilityMap = {
   public: { label: '公开', color: 'bg-stone-100 text-stone-600' },
-  partner: { label: '仅伴侣', color: 'bg-primary-light text-primary' },
+  partner: { label: '伴侣', color: 'bg-primary-light text-primary' },
+  friend: { label: '朋友', color: 'bg-sky-50 text-sky-600' },
+  family: { label: '家人', color: 'bg-violet-50 text-violet-600' },
   private: { label: '仅自己', color: 'bg-amber-50 text-amber-600' },
 }
 

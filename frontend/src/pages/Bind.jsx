@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useLoginModal } from '../contexts/LoginModalContext'
+import PageHeader from '../components/PageHeader'
 
 const typeOptions = [
   { key: 'couple', label: '情侣' },
@@ -29,19 +30,19 @@ export default function Bind({ user }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [success, setSuccess] = useState(false)
-  const [relationship, setRelationship] = useState(null)
+  const [relationships, setRelationships] = useState([])
   const [sentRequests, setSentRequests] = useState([])
   const [incomingRequests, setIncomingRequests] = useState([])
-  const [confirmUnbind, setConfirmUnbind] = useState(false)
+  const [confirmUnbind, setConfirmUnbind] = useState(null)
 
   const loadData = useCallback(async () => {
     try {
       const [rel, sent, incoming] = await Promise.all([
-        api.getRelationship().catch(() => ({ relationship: null })),
+        api.getRelationship().catch(() => ({ relationships: [] })),
         api.getSentRequests().catch(() => ({ requests: [] })),
         api.getPendingRequests().catch(() => ({ requests: [] })),
       ])
-      setRelationship(rel.relationship || null)
+      setRelationships(rel.relationships || [])
       setSentRequests(sent.requests || [])
       setIncomingRequests(incoming.requests || [])
     } catch (err) {
@@ -101,16 +102,16 @@ export default function Bind({ user }) {
     }
   }
 
-  const handleUnbind = async () => {
-    if (!confirmUnbind) {
-      setConfirmUnbind(true)
-      setTimeout(() => setConfirmUnbind(false), 3000)
+  const handleUnbind = async (id) => {
+    if (confirmUnbind !== id) {
+      setConfirmUnbind(id)
+      setTimeout(() => setConfirmUnbind(null), 3000)
       return
     }
-    setConfirmUnbind(false)
+    setConfirmUnbind(null)
     setLoading(true)
     try {
-      await api.unbindRelationship()
+      await api.unbindRelationship(id)
       setNotice('已解除绑定')
       await loadData()
     } catch (err) {
@@ -134,37 +135,52 @@ export default function Bind({ user }) {
     )
   }
 
-  const partnerName = relationship ? (relationship.nick_name || relationship.username || '对方') : ''
+  const couple = relationships.filter(r => r.type === 'couple')
+  const friends = relationships.filter(r => r.type === 'friend')
+  const families = relationships.filter(r => r.type === 'family')
+  const availableTypes = typeOptions.filter(t => t.key !== 'couple' || couple.length === 0)
+
+  const renderRelationGroup = (title, list) => {
+    if (list.length === 0) return null
+    return (
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 mb-4">
+        <p className="text-xs text-text-sub mb-3">{title}</p>
+        <div className="space-y-3">
+          {list.map(rel => {
+            const name = rel.nick_name || rel.username || '对方'
+            return (
+              <div key={rel.id} className="flex items-center gap-3">
+                <Avatar name={name} avatar={rel.avatar} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-text-main truncate">{name}</div>
+                  <div className="text-xs text-muted">{typeLabel[rel.type] || rel.type}</div>
+                </div>
+                <button
+                  onClick={() => handleUnbind(rel.id)}
+                  disabled={loading}
+                  className={"flex-shrink-0 text-xs px-3 py-1.5 rounded-full border disabled:opacity-50 whitespace-nowrap " + (confirmUnbind === rel.id ? 'bg-red-500 text-white border-red-500' : 'text-red-500 border-red-200')}
+                >
+                  {confirmUnbind === rel.id ? '再点一次确认' : '解除绑定'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] p-4">
-      <div className="flex items-center mb-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-muted">← 返回</button>
-        <h1 className="text-xl font-semibold text-text-main ml-4">绑定伴侣</h1>
-      </div>
+    <div className="min-h-screen bg-[#F5F5F0]">
+      <PageHeader title="绑定伴侣" />
+      <div className="px-4">
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
       {notice && <p className="text-sm text-green-600 bg-green-50 px-3 py-2 rounded-xl mb-4">{notice}</p>}
 
-      {relationship && (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 mb-4">
-          <p className="text-xs text-text-sub mb-3">当前绑定</p>
-          <div className="flex items-center gap-3">
-            <Avatar name={partnerName} avatar={relationship.avatar} />
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-text-main">{partnerName}</div>
-              <div className="text-xs text-muted">{typeLabel[relationship.type] || relationship.type}</div>
-            </div>
-            <button
-              onClick={handleUnbind}
-              disabled={loading}
-              className={"flex-shrink-0 text-xs px-3 py-1.5 rounded-full border disabled:opacity-50 " + (confirmUnbind ? 'bg-red-500 text-white border-red-500' : 'text-red-500 border-red-200')}
-            >
-              {confirmUnbind ? '再点一次确认' : '解除绑定'}
-            </button>
-          </div>
-        </div>
-      )}
+      {renderRelationGroup('伴侣', couple)}
+      {renderRelationGroup('朋友', friends)}
+      {renderRelationGroup('家人', families)}
 
       {incomingRequests.length > 0 && (
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 mb-4">
@@ -221,7 +237,7 @@ export default function Bind({ user }) {
         </div>
       )}
 
-      {!relationship && (
+      {couple.length === 0 && (
         <>
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100 mb-4">
             <label className="block text-sm text-text-sub mb-2">输入对方邮箱</label>
@@ -254,7 +270,7 @@ export default function Bind({ user }) {
               </div>
 
               <div className="flex gap-2 mb-4">
-                {typeOptions.map(opt => (
+                {availableTypes.map(opt => (
                   <button
                     key={opt.key}
                     onClick={() => setType(opt.key)}
@@ -276,6 +292,7 @@ export default function Bind({ user }) {
           )}
         </>
       )}
+      </div>
     </div>
   )
 }

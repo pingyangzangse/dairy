@@ -54,3 +54,35 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Web Push：收到推送时弹系统通知
+self.addEventListener('push', (event) => {
+  let data = {}
+  try { data = event.data ? event.data.json() : {} } catch { data = {} }
+  const title = data.title || '日记'
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: data.url || '/profile' },
+    })
+  )
+})
+
+// 点击通知：聚焦已有窗口并跳转，或新开页面
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = (event.notification.data && event.notification.data.url) || '/'
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          client.navigate(url)
+          return client.focus()
+        }
+      }
+      return clients.openWindow(url)
+    })
+  )
+})

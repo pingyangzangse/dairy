@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useLoginModal } from '../contexts/LoginModalContext'
 import DiaryCard from '../components/DiaryCard'
+import PageHeader from '../components/PageHeader'
 
 export default function Feed({ user }) {
   const navigate = useNavigate()
@@ -17,7 +18,7 @@ export default function Feed({ user }) {
   const modes = [
     { key: 'all', label: '广场' },
     { key: 'following', label: '关注' },
-    { key: 'partner', label: '伴侣' },
+    { key: 'partner', label: '亲友' },
   ]
 
   async function loadData(reset = false) {
@@ -64,18 +65,21 @@ export default function Feed({ user }) {
 
   return (
     <div className="min-h-screen bg-surface">
-      <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm px-4 py-3 border-b border-stone-100">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-semibold text-primary">日记广场</h1>
-          <button
-            onClick={handleWrite}
-            className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium"
-          >
-            写日记
-          </button>
-        </div>
-        <div className="flex gap-2">
-          {modes.map(m => (
+      <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm border-b border-stone-100">
+        <PageHeader
+          title="日记广场"
+          right={
+            <button
+              onClick={handleWrite}
+              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium"
+            >
+              写日记
+            </button>
+          }
+        />
+        <div className="px-4 pb-3">
+          <div className="flex gap-2">
+            {modes.map(m => (
             <button
               key={m.key}
               onClick={() => handleModeChange(m.key)}
@@ -84,6 +88,7 @@ export default function Feed({ user }) {
               {m.label}
             </button>
           ))}
+          </div>
         </div>
       </div>
 

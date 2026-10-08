@@ -67,7 +67,7 @@ export const api = {
   requestRelationship: (recipient_id, type) => request('/api/relationship/request', { method: 'POST', body: JSON.stringify({ recipient_id, type }) }),
   getPendingRequests: () => request('/api/relationship/pending'),
   respondRequest: (request_id, action) => request('/api/relationship/respond', { method: 'POST', body: JSON.stringify({ request_id, action }) }),
-  unbindRelationship: () => request('/api/relationship/unbind', { method: 'POST' }),
+  unbindRelationship: (relationship_id) => request('/api/relationship/unbind', { method: 'POST', body: JSON.stringify({ relationship_id }) }),
 
   // Diary
   createDiary: (body) => request('/api/diaries', { method: 'POST', body: JSON.stringify(body) }),
@@ -98,6 +98,12 @@ export const api = {
   getNotifications: () => request('/api/notifications'),
   getUnreadCount: () => request('/api/notifications/unread-count'),
   markNotificationsRead: () => request('/api/notifications/read', { method: 'POST' }),
+  markNotificationRead: (id) => request('/api/notifications/' + id + '/read', { method: 'POST' }),
+
+  // Push
+  getPushKey: () => request('/api/push/key'),
+  subscribePush: (subscription) => request('/api/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription }) }),
+  unsubscribePush: (endpoint) => request('/api/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
 
   // Upload
   uploadImage: async (file) => {

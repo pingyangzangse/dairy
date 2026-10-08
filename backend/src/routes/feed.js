@@ -24,21 +24,7 @@ router.get('/api/feed', defaultLimiter, async (req, res) => {
     let where = '';
     let params = [];
 
-    if (mode === 'partner') {
-      // 仅看伴侣：自己的日记（全部）+ 伴侣的日记（全部，因为伴侣可见的已授权）
-      const rels = await diaryQuery(
-        `SELECT * FROM relationships
-         WHERE (requester_id = ? OR recipient_id = ?) AND status = 'accepted'`,
-        [userId, userId]
-      );
-      const partnerIds = rels.map(r => r.requester_id === userId ? r.recipient_id : r.requester_id);
-      if (partnerIds.length === 0) {
-        return res.json({ diaries: [], total: 0, page, pageSize });
-      }
-      const placeholders = partnerIds.map(() => '?').join(',');
-      where = `(author_id = ? OR author_id IN (${placeholders}))`;
-      params = [userId, ...partnerIds];
-    } else if (mode === 'following') {
+    if (mode === 'following') {
       // 仅看关注：自己的全部 + 关注者的公开日记
       const follows = await diaryQuery(
         'SELECT following_id FROM follows WHERE follower_id = ?',
@@ -53,20 +39,52 @@ router.get('/api/feed', defaultLimiter, async (req, res) => {
         where = `(author_id = ? OR (author_id IN (${placeholders}) AND visibility = 'public'))`;
         params = [userId, ...followingIds];
       }
-    } else {
-      // 全部：公开日记 + 自己的全部 + 伴侣的 partner/公开
+    } else if (mode === 'partner') {
+      // 亲友：自己的全部 + 各绑定群组按可见范围授权的日记
       const rels = await diaryQuery(
         `SELECT * FROM relationships
          WHERE (requester_id = ? OR recipient_id = ?) AND status = 'accepted'`,
         [userId, userId]
       );
-      const partnerIds = rels.map(r => r.requester_id === userId ? r.recipient_id : r.requester_id);
+      const groupMap = { couple: 'partner', friend: 'friend', family: 'family' };
+      const byGroup = { partner: [], friend: [], family: [] };
+      for (const r of rels) {
+        const other = r.requester_id === userId ? r.recipient_id : r.requester_id;
+        const g = groupMap[r.type];
+        if (g) byGroup[g].push(other);
+      }
+      const conditions = ['author_id = ?'];
+      params = [userId];
+      for (const g of ['partner', 'friend', 'family']) {
+        if (byGroup[g].length > 0) {
+          const ph = byGroup[g].map(() => '?').join(',');
+          conditions.push(`(author_id IN (${ph}) AND visibility IN ('public', '${g}'))`);
+          params.push(...byGroup[g]);
+        }
+      }
+      where = conditions.join(' OR ');
+    } else {
+      // 广场：公开日记 + 自己的全部 + 各群组按可见范围授权的日记
+      const rels = await diaryQuery(
+        `SELECT * FROM relationships
+         WHERE (requester_id = ? OR recipient_id = ?) AND status = 'accepted'`,
+        [userId, userId]
+      );
+      const groupMap = { couple: 'partner', friend: 'friend', family: 'family' };
+      const byGroup = { partner: [], friend: [], family: [] };
+      for (const r of rels) {
+        const other = r.requester_id === userId ? r.recipient_id : r.requester_id;
+        const g = groupMap[r.type];
+        if (g) byGroup[g].push(other);
+      }
       const conditions = ["visibility = 'public'", 'author_id = ?'];
       params = [userId];
-      if (partnerIds.length > 0) {
-        const placeholders = partnerIds.map(() => '?').join(',');
-        conditions.push(`(author_id IN (${placeholders}) AND visibility IN ('public', 'partner'))`);
-        params.push(...partnerIds);
+      for (const g of ['partner', 'friend', 'family']) {
+        if (byGroup[g].length > 0) {
+          const ph = byGroup[g].map(() => '?').join(',');
+          conditions.push(`(author_id IN (${ph}) AND visibility IN ('public', '${g}'))`);
+          params.push(...byGroup[g]);
+        }
       }
       where = conditions.join(' OR ');
     }

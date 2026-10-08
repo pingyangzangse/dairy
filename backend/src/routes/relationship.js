@@ -9,19 +9,26 @@ const router = express.Router();
 const VALID_TYPES = new Set(['couple', 'friend', 'family']);
 const TYPE_LABEL = { couple: '情侣', friend: '朋友', family: '家人' };
 
-// 查询当前关系状态
+// 查询当前全部绑定关系（情侣最多一个；朋友、家人可多个）
 router.get('/api/relationship', auth, defaultLimiter, async (req, res) => {
   try {
     const rows = await diaryQuery(
       `SELECT * FROM relationships
        WHERE (requester_id = ? OR recipient_id = ?) AND status = 'accepted'
-       LIMIT 1`,
+       ORDER BY created_at ASC`,
       [req.user.id, req.user.id]
     );
-    const rel = rows[0];
-    if (!rel) return res.json({ relationship: null });
-    const partnerId = rel.requester_id === req.user.id ? rel.recipient_id : rel.requester_id;
-    res.json({ relationship: { ...rel, partnerId } });
+    const relationships = [];
+    for (const rel of rows) {
+      const partnerId = rel.requester_id === req.user.id ? rel.recipient_id : rel.requester_id;
+      const users = await authQuery(
+        'SELECT id, username, nick_name, avatar FROM ks_users WHERE id = ? LIMIT 1',
+        [partnerId]
+      );
+      const u = users[0] || {};
+      relationships.push({ ...rel, partner_id: partnerId, username: u.username, nick_name: u.nick_name, avatar: u.avatar });
+    }
+    res.json({ relationships });
   } catch (err) {
     console.error('[api] /relationship error:', err);
     res.status(500).json({ error: err.message });
@@ -37,12 +44,25 @@ router.post('/api/relationship/request', auth, defaultLimiter, async (req, res) 
     if (recipient_id === req.user.id) return res.status(400).json({ error: '不能绑定自己' });
 
     await diaryTransaction(async (conn) => {
-      const [existing] = await conn.query(
+      // 同一对人已绑定则不可重复申请
+      const [acceptedPair] = await conn.query(
         `SELECT * FROM relationships
-         WHERE (requester_id = ? OR recipient_id = ?) AND status = 'accepted'`,
-        [req.user.id, req.user.id]
+         WHERE ((requester_id = ? AND recipient_id = ?) OR (requester_id = ? AND recipient_id = ?))
+         AND status = 'accepted'`,
+        [req.user.id, recipient_id, recipient_id, req.user.id]
       );
-      if (existing.length > 0) throw new Error('你已存在绑定关系');
+      if (acceptedPair.length > 0) throw new Error('你们已经绑定过了');
+
+      // 情侣关系排他：任一方已有情侣，都不能再发情侣申请（朋友/家人不限数量）
+      if (type === 'couple') {
+        const [couples] = await conn.query(
+          `SELECT * FROM relationships
+           WHERE (requester_id IN (?, ?) OR recipient_id IN (?, ?))
+           AND status = 'accepted' AND type = 'couple'`,
+          [req.user.id, recipient_id, req.user.id, recipient_id]
+        );
+        if (couples.length > 0) throw new Error('你或对方已绑定情侣关系，无法重复绑定');
+      }
 
       const [pending] = await conn.query(
         `SELECT * FROM relationships
@@ -137,12 +157,15 @@ router.post('/api/relationship/respond', auth, defaultLimiter, async (req, res) 
       if (!found) throw new Error('申请不存在或已处理');
 
       if (action === 'accept') {
-        const [existing] = await conn.query(
-          `SELECT * FROM relationships
-           WHERE (requester_id = ? OR recipient_id = ?) AND status = 'accepted'`,
-          [req.user.id, req.user.id]
-        );
-        if (existing.length > 0) throw new Error('你已存在绑定关系');
+        if (found.type === 'couple') {
+          const [couples] = await conn.query(
+            `SELECT * FROM relationships
+             WHERE (requester_id IN (?, ?) OR recipient_id IN (?, ?))
+             AND status = 'accepted' AND type = 'couple'`,
+            [req.user.id, found.requester_id, req.user.id, found.requester_id]
+          );
+          if (couples.length > 0) throw new Error('你或对方已绑定情侣关系');
+        }
         await conn.query('UPDATE relationships SET status = ? WHERE id = ?', ['accepted', request_id]);
       } else {
         await conn.query('DELETE FROM relationships WHERE id = ?', [request_id]);
@@ -166,14 +189,17 @@ router.post('/api/relationship/respond', auth, defaultLimiter, async (req, res) 
   }
 });
 
-// 解除绑定
+// 解除绑定：按关系 id 解除单条
 router.post('/api/relationship/unbind', auth, defaultLimiter, async (req, res) => {
   try {
-    await diaryQuery(
+    const { relationship_id } = req.body;
+    if (!relationship_id) return res.status(400).json({ error: '参数错误' });
+    const result = await diaryQuery(
       `DELETE FROM relationships
-       WHERE (requester_id = ? OR recipient_id = ?) AND status = 'accepted'`,
-      [req.user.id, req.user.id]
+       WHERE id = ? AND (requester_id = ? OR recipient_id = ?) AND status = 'accepted'`,
+      [relationship_id, req.user.id, req.user.id]
     );
+    if (result.affectedRows === 0) return res.status(404).json({ error: '绑定关系不存在' });
     res.json({ success: true, message: '已解除绑定' });
   } catch (err) {
     console.error('[api] /relationship/unbind error:', err);

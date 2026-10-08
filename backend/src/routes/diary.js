@@ -5,7 +5,7 @@ const { auth } = require('../lib/authz');
 const { defaultLimiter } = require('../lib/limits');
 
 const router = express.Router();
-const VALID_VISIBILITY = new Set(['public', 'partner', 'private']);
+const VALID_VISIBILITY = new Set(['public', 'partner', 'friend', 'family', 'private']);
 
 // 创建日记
 router.post('/api/diaries', auth, defaultLimiter, async (req, res) => {
@@ -83,20 +83,22 @@ router.get('/api/diaries/:id', auth, defaultLimiter, async (req, res) => {
     const diary = await diaryQueryOne('SELECT * FROM diaries WHERE id = ?', [req.params.id]);
     if (!diary) return res.status(404).json({ error: '日记不存在' });
 
-    const partnerRel = await diaryQueryOne(
-      `SELECT * FROM relationships
-       WHERE ((requester_id = ? AND recipient_id = ?) OR (requester_id = ? AND recipient_id = ?))
-       AND status = 'accepted'`,
-      [req.user.id, diary.author_id, diary.author_id, req.user.id]
-    );
-    const isPartner = !!partnerRel;
     const isAuthor = diary.author_id === req.user.id;
 
     if (diary.visibility === 'private' && !isAuthor) {
       return res.status(403).json({ error: '无权查看' });
     }
-    if (diary.visibility === 'partner' && !isAuthor && !isPartner) {
-      return res.status(403).json({ error: '无权查看' });
+    // 群组可见：partner/friend/family 分别要求与作者有对应类型的已接受关系
+    const GROUP_TO_TYPE = { partner: 'couple', friend: 'friend', family: 'family' };
+    const needType = GROUP_TO_TYPE[diary.visibility];
+    if (needType && !isAuthor) {
+      const rel = await diaryQueryOne(
+        `SELECT * FROM relationships
+         WHERE ((requester_id = ? AND recipient_id = ?) OR (requester_id = ? AND recipient_id = ?))
+         AND status = 'accepted' AND type = ?`,
+        [req.user.id, diary.author_id, diary.author_id, req.user.id, needType]
+      );
+      if (!rel) return res.status(403).json({ error: '无权查看' });
     }
 
     const authorRows = await authQuery(

@@ -4,9 +4,11 @@ import { api } from '../lib/api'
 import { useLoginModal } from '../contexts/LoginModalContext'
 
 const visibilityOptions = [
-  { key: 'partner', label: '仅伴侣可见' },
+  { key: 'partner', label: '伴侣' },
+  { key: 'friend', label: '朋友' },
+  { key: 'family', label: '家人' },
   { key: 'public', label: '公开' },
-  { key: 'private', label: '仅自己可见' },
+  { key: 'private', label: '仅自己' },
 ]
 
 export default function Write({ user }) {
@@ -117,7 +119,7 @@ export default function Write({ user }) {
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
             {visibilityOptions.map(opt => (
               <button
                 key={opt.key}

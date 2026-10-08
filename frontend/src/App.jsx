@@ -51,7 +51,7 @@ function App() {
 
   return (
     <LoginModalProvider>
-    <div className="min-h-screen bg-surface pb-20">
+    <div className="min-h-screen bg-surface pb-safe-nav">
       <Routes>
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/" element={<Feed user={user} />} />
