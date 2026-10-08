@@ -51,7 +51,8 @@ function App() {
 
   return (
     <LoginModalProvider>
-    <div className="min-h-dvh bg-surface pb-safe-nav">
+    <div className="min-h-dvh bg-surface pb-safe-nav flex flex-col">
+      <main className="flex-1 flex flex-col">
       <Routes>
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/" element={<Feed user={user} />} />
@@ -61,6 +62,7 @@ function App() {
         <Route path="/bind" element={<Bind user={user} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </main>
       {!isLoginPage && <BottomNav user={user} />}
       <LoginModal />
     </div>

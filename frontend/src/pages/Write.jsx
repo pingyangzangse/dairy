@@ -98,7 +98,7 @@ export default function Write({ user }) {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F5F5F0] p-4">
+    <div className="flex-1 bg-[#F5F5F0] p-4">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold text-text-main">写日记</h1>
         <button

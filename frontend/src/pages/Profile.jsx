@@ -185,7 +185,7 @@ export default function Profile({ user, onLogout }) {
   if (!user) return null
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="flex-1 bg-surface">
       <PageHeader title="个人中心" />
       <div className="px-4 pb-6">
 

@@ -64,7 +64,7 @@ export default function Feed({ user }) {
   }
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="flex-1 bg-surface">
       <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm border-b border-stone-100">
         <PageHeader
           title="日记广场"

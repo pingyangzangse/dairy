@@ -76,12 +76,12 @@ export default function DiaryDetail({ user }) {
     }
   }
 
-  if (loading) return <div className="min-h-dvh flex items-center justify-center text-text-sub">加载中...</div>
-  if (error) return <div className="min-h-dvh flex items-center justify-center text-red-500">{error}</div>
+  if (loading) return <div className="flex-1 flex items-center justify-center text-text-sub">加载中...</div>
+  if (error) return <div className="flex-1 flex items-center justify-center text-red-500">{error}</div>
   if (!diary) return null
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="flex-1 bg-surface">
       <div className="bg-white px-5 py-6 border-b border-stone-100">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate(-1)} className="text-sm text-text-sub">← 返回</button>

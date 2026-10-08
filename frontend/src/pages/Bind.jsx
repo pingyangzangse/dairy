@@ -123,7 +123,7 @@ export default function Bind({ user }) {
 
   if (success) {
     return (
-      <div className="min-h-dvh bg-[#F5F5F0] p-4 flex flex-col items-center justify-center text-center">
+      <div className="flex-1 bg-[#F5F5F0] p-4 flex flex-col items-center justify-center text-center">
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-stone-100 w-full">
           <h2 className="text-lg font-semibold text-text-main mb-2">申请已发送</h2>
           <p className="text-sm text-text-sub mb-6">对方同意后，你们就绑定成功啦</p>
@@ -171,7 +171,7 @@ export default function Bind({ user }) {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F5F5F0]">
+    <div className="flex-1 bg-[#F5F5F0]">
       <PageHeader title="绑定伴侣" />
       <div className="px-4">
 
