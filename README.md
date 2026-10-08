@@ -30,9 +30,11 @@ npm run dev
 
 浏览器打开 http://localhost:5173/
 
-## 部署（Vercel 前端 + Render 后端）
+## 部署
 
-### 1. 部署后端到 Render
+### 方案：Render 后端 + GitHub Pages 前端
+
+#### 1. 部署后端到 Render
 
 点击上方 **Deploy to Render** 按钮，按提示连接 GitHub 仓库。
 
@@ -47,14 +49,15 @@ npm run dev
 
 部署完成后，在阿里云 RDS 白名单里添加 Render 的出口 IP。
 
-### 2. 部署前端到 Vercel
+#### 2. 部署前端到 GitHub Pages
 
-1. 打开 https://vercel.com/new 并导入 `pingyangzangse/dairy` 仓库
-2. Root Directory 选择 `frontend`
-3. Build Command 保持默认：`npm run build`
-4. Output Directory 保持默认：`dist`
-5. 添加环境变量：
-   - `VITE_API_BASE` = `https://你的render域名.onrender.com/api`
-6. 点击 Deploy
+1. 打开仓库 Settings -> Pages
+2. Source 选择 **GitHub Actions**
+3. 进入 Settings -> Secrets and variables -> Actions -> Repository secrets
+4. 添加 `VITE_API_BASE`，值为 Render 后端地址 + /api，例如：
+   ```
+   https://diary-backend-xxx.onrender.com/api
+   ```
+5. 推送一次代码触发 Actions，或手动运行工作流
 
 > 注意：当前图片上传使用本地磁盘存储，免费实例重启后上传的图片会丢失。正式使用建议接入阿里云 OSS。
