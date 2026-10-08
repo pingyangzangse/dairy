@@ -45,26 +45,20 @@ function App() {
     )
   }
 
-  const publicRoutes = ['/login']
-  const isPublic = publicRoutes.includes(location.pathname)
-
-  if (!user && !isPublic) {
-    return <Navigate to="/login" replace />
-  }
+  const isLoginPage = location.pathname === '/login'
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] max-w-md mx-auto shadow-xl flex flex-col">
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
-        <Routes>
-          <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login onLogin={handleLogin} />} />
-          <Route path="/" element={<Feed />} />
-          <Route path="/write" element={<Write />} />
-          <Route path="/diary/:id" element={<DiaryDetail />} />
-          <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} onUpdate={setUser} />} />
-          <Route path="/bind" element={<Bind />} />
-        </Routes>
-      </div>
-      {user && <BottomNav />}
+    <div className="min-h-screen bg-surface pb-20">
+      <Routes>
+        <Route path="/login" element={<Login onLogin={handleLogin} />} />
+        <Route path="/" element={<Feed user={user} />} />
+        <Route path="/write" element={<Write user={user} />} />
+        <Route path="/diaries/:id" element={<DiaryDetail user={user} />} />
+        <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} />} />
+        <Route path="/bind" element={<Bind user={user} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {!isLoginPage && <BottomNav user={user} />}
     </div>
   )
 }

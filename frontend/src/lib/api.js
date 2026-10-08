@@ -48,6 +48,12 @@ export const api = {
   sendCode: (email) => request('/api/auth/send-code', { method: 'POST', body: JSON.stringify({ email }) }),
   loginByCode: (email, code) => request('/api/auth/login-by-code', { method: 'POST', body: JSON.stringify({ email, code }) }),
 
+  // Wallet
+  walletChallenge: (address) => request('/api/auth/wallet/challenge', { method: 'POST', body: JSON.stringify({ address }) }),
+  walletVerify: (body) => request('/api/auth/wallet/verify', { method: 'POST', body: JSON.stringify(body) }),
+  walletLink: (body) => request('/api/auth/wallet/link', { method: 'POST', body: JSON.stringify(body) }),
+  walletUnlink: () => request('/api/auth/wallet/unlink', { method: 'POST' }),
+
   // User
   me: () => request('/api/user/me'),
   updateProfile: (body) => request('/api/user/profile', { method: 'PATCH', body: JSON.stringify(body) }),
@@ -69,7 +75,7 @@ export const api = {
 
   // Comments
   getComments: (diaryId) => request('/api/diaries/' + diaryId + '/comments'),
-  postComment: (diaryId, content) => request('/api/diaries/' + diaryId + '/comments', { method: 'POST', body: JSON.stringify({ content }) }),
+  addComment: (diaryId, content) => request('/api/diaries/' + diaryId + '/comments', { method: 'POST', body: JSON.stringify({ content }) }),
   deleteComment: (id) => request('/api/comments/' + id, { method: 'DELETE' }),
 
   // Follow
@@ -78,7 +84,7 @@ export const api = {
   isFollowing: (userId) => request('/api/follow/' + userId),
 
   // Feed
-  getFeed: (mode = 'all', page = 1, pageSize = 10) => request('/api/feed?mode=' + mode + '&page=' + page + '&pageSize=' + pageSize),
+  feed: (mode = 'all', page = 1, pageSize = 10) => request('/api/feed?mode=' + mode + '&page=' + page + '&pageSize=' + pageSize),
 
   // Upload
   uploadImage: async (file) => {
@@ -91,6 +97,6 @@ export const api = {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '上传失败')
-    return data.url
+    return data
   },
 }

@@ -1,18 +1,26 @@
 const express = require('express');
 const { diaryQuery, authQuery } = require('../db');
-const { auth } = require('../lib/authz');
 const { defaultLimiter } = require('../lib/limits');
 
 const router = express.Router();
 
-router.get('/api/feed', auth, defaultLimiter, async (req, res) => {
+router.get('/api/feed', defaultLimiter, async (req, res) => {
   try {
     const mode = req.query.mode || 'all'; // all | following | partner
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize || '10', 10)));
     const offset = (page - 1) * pageSize;
 
-    const userId = req.user.id;
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    let userId = null;
+    if (token) {
+      const rows = await authQuery('SELECT user_id FROM ks_tokens WHERE token = ? AND expires_at > NOW() LIMIT 1', [token]);
+      if (rows[0]) userId = rows[0].user_id;
+    }
+    if ((mode === 'partner' || mode === 'following') && !userId) {
+      return res.status(401).json({ error: '请先登录' });
+    }
+
     let where = '';
     let params = [];
 

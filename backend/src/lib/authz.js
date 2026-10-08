@@ -12,6 +12,7 @@ function packUser(u) {
     nickName: u.nick_name,
     email: u.email,
     avatar: u.avatar,
+    walletAddress: u.wallet_address,
   };
 }
 
@@ -90,4 +91,5 @@ function isLegacyHash(stored) {
 module.exports = {
   issueToken, resolveToken, revokeToken, auth,
   hashPassword, verifyPassword, isLegacyHash,
+  packUser,
 };

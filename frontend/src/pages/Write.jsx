@@ -8,7 +8,7 @@ const visibilityOptions = [
   { key: 'private', label: '仅自己可见' },
 ]
 
-export default function Write() {
+export default function Write({ user }) {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [visibility, setVisibility] = useState('partner')
@@ -16,6 +16,16 @@ export default function Write() {
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!user) {
+      if (window.confirm('写日记需要登录，是否去登录？')) {
+        navigate('/login')
+      } else {
+        navigate('/')
+      }
+    }
+  }, [user])
   const fileRef = useRef()
   const navigate = useNavigate()
 

@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/api/user/me', auth, defaultLimiter, async (req, res) => {
   try {
     const rows = await authQuery(
-      'SELECT id, username, nick_name, email, avatar FROM ks_users WHERE id = ? LIMIT 1',
+      'SELECT id, username, nick_name, email, avatar, wallet_address FROM ks_users WHERE id = ? LIMIT 1',
       [req.user.id]
     );
     const user = rows[0];
@@ -21,6 +21,7 @@ router.get('/api/user/me', auth, defaultLimiter, async (req, res) => {
       nickName: user.nick_name,
       email: user.email,
       avatar: user.avatar,
+      walletAddress: user.wallet_address,
     });
   } catch (err) {
     console.error('[api] /user/me error:', err);

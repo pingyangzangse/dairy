@@ -1,115 +1,164 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { requestAccount, signMessage, discoverWallets, createWalletConnectProvider } from '../lib/wallet'
 
-export default function Profile({ user, onLogout, onUpdate }) {
-  const [relationship, setRelationship] = useState(null)
-  const [pending, setPending] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [avatarFile, setAvatarFile] = useState(null)
+export default function Profile({ user, onLogout }) {
   const navigate = useNavigate()
+  const [profile, setProfile] = useState(user)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
+    if (!user) {
+      if (window.confirm('该功能需要登录后才能使用，是否去登录？')) {
+        navigate('/login')
+      } else {
+        navigate('/')
+      }
+      return
+    }
     loadData()
-  }, [])
+  }, [user])
 
-  const loadData = async () => {
+  async function loadData() {
     try {
-      const [relData, pendingData] = await Promise.all([
-        api.getRelationship(),
-        api.getPendingRequests(),
-      ])
-      setRelationship(relData.relationship)
-      setPending(pendingData.requests)
+      const data = await api.me()
+      setProfile(data)
     } catch (err) {
-      console.error(err)
+      setError(err.message)
+    }
+  }
+
+  async function handleWalletLink(provider) {
+    setLoading(true)
+    setError('')
+    try {
+      const address = await requestAccount(provider)
+      const { challenge_id, message } = await api.walletChallenge(address)
+      const signature = await signMessage(provider, address, message)
+      await api.walletLink({ challenge_id, address, signature })
+      await loadData()
+      alert('钱包绑定成功')
+    } catch (err) {
+      setError(err.message || '绑定失败')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAvatarChange = async (e) => {
+  async function handleWalletQrLink() {
+    setLoading(true)
+    setError('')
+    try {
+      const provider = await createWalletConnectProvider()
+      await provider.enable()
+      const accounts = provider.accounts || []
+      const address = accounts[0]
+      if (!address) throw new Error('未能获取钱包地址')
+      const { challenge_id, message } = await api.walletChallenge(address)
+      const signature = await signMessage(provider, address, message)
+      await api.walletLink({ challenge_id, address, signature })
+      await loadData()
+      alert('钱包绑定成功')
+    } catch (err) {
+      setError(err.message || '绑定失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleWalletUnlink() {
+    if (!window.confirm('确定要解绑钱包吗？')) return
+    setLoading(true)
+    try {
+      await api.walletUnlink()
+      await loadData()
+      alert('钱包已解绑')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleAvatarChange(e) {
     const file = e.target.files[0]
     if (!file) return
     try {
-      const url = await api.uploadImage(file)
+      const { url } = await api.uploadImage(file)
       await api.updateProfile({ avatar: url })
-      onUpdate({ ...user, avatar: url })
+      await loadData()
     } catch (err) {
       alert(err.message)
     }
   }
 
-  const handleRespond = async (requestId, action) => {
-    try {
-      await api.respondRequest(requestId, action)
-      loadData()
-    } catch (err) {
-      alert(err.message)
-    }
-  }
+  if (!user) return null
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] p-4 pb-24">
-      <h1 className="text-xl font-semibold text-text-main mb-4">我的</h1>
+    <div className="min-h-screen bg-surface px-5 py-6">
+      <h1 className="text-xl font-semibold text-primary mb-6">个人中心</h1>
 
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 mb-4">
-        <div className="flex items-center gap-4">
-          <label className="relative w-16 h-16 rounded-full bg-primary-light flex items-center justify-center text-primary text-xl font-medium overflow-hidden cursor-pointer">
-            {user?.avatar ? (
-              <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              (user?.nickName || user?.username || '?').slice(0, 1)
-            )}
-            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-          </label>
+      {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+
+      <div className="bg-white rounded-2xl p-5 border border-stone-100 mb-4">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="relative">
+            <img
+              src={profile?.avatar || '/default-avatar.png'}
+              alt="avatar"
+              className="w-16 h-16 rounded-full object-cover bg-stone-100"
+              onError={e => { e.target.src = '/default-avatar.png' }}
+            />
+            <label className="absolute bottom-0 right-0 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-[10px]">
+              换
+              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            </label>
+          </div>
           <div>
-            <div className="text-lg font-semibold text-text-main">{user?.nickName || user?.username}</div>
-            <div className="text-sm text-muted">{user?.email}</div>
+            <p className="font-medium text-text-main">{profile?.nickName || profile?.username || '未命名'}</p>
+            <p className="text-xs text-text-sub">{profile?.email || '未绑定邮箱'}</p>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-text-main">亲密关系</h2>
-          {!relationship && (
-            <Link to="/bind" className="text-sm text-primary font-medium">去绑定</Link>
+        <div className="border-t border-stone-100 pt-4">
+          <p className="text-sm font-medium text-text-main mb-2">钱包绑定</p>
+          {profile?.walletAddress ? (
+            <div className="flex items-center justify-between bg-stone-50 rounded-xl p-3">
+              <span className="text-xs text-text-sub font-mono">{profile.walletAddress}</span>
+              <button
+                onClick={handleWalletUnlink}
+                disabled={loading}
+                className="text-xs text-red-500 px-2 py-1 border border-red-200 rounded-lg disabled:opacity-50"
+              >
+                解绑
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-text-sub">绑定钱包后可通过钱包登录，且与 DeepTalk 账号通用</p>
+              <button
+                onClick={async () => {
+                  const list = await discoverWallets()
+                  if (list[0]) await handleWalletLink(list[0].provider)
+                  else setError('未检测到钱包插件')
+                }}
+                disabled={loading}
+                className="w-full py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50"
+              >
+                {loading ? '处理中...' : '绑定浏览器钱包'}
+              </button>
+              <button
+                onClick={handleWalletQrLink}
+                disabled={loading}
+                className="w-full py-2.5 bg-white border border-primary text-primary rounded-xl text-sm font-medium disabled:opacity-50"
+              >
+                {loading ? '处理中...' : '手机钱包扫码绑定'}
+              </button>
+            </div>
           )}
         </div>
-
-        {loading ? (
-          <p className="text-sm text-muted">加载中...</p>
-        ) : relationship ? (
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-text-sub">
-              已绑定：<span className="font-medium text-text-main">{relationship.type === 'couple' ? '情侣' : relationship.type === 'friend' ? '朋友' : '家人'}</span>
-            </div>
-            <button
-              onClick={() => api.unbindRelationship().then(loadData)}
-              className="text-xs text-red-400 border border-red-200 px-3 py-1 rounded-full"
-            >
-              解除
-            </button>
-          </div>
-        ) : (
-          <p className="text-sm text-muted">还没有绑定关系</p>
-        )}
-
-        {pending.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-stone-100">
-            <h3 className="text-sm font-medium text-text-main mb-2">收到申请</h3>
-            {pending.map(req => (
-              <div key={req.id} className="flex items-center justify-between py-2">
-                <span className="text-sm text-text-sub">{req.nick_name || req.username}</span>
-                <div className="flex gap-2">
-                  <button onClick={() => handleRespond(req.id, 'accept')} className="px-3 py-1 bg-primary text-white rounded-full text-xs">同意</button>
-                  <button onClick={() => handleRespond(req.id, 'reject')} className="px-3 py-1 bg-stone-100 text-text-sub rounded-full text-xs">拒绝</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <button

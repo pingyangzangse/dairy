@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 
@@ -8,23 +8,33 @@ const typeOptions = [
   { key: 'family', label: '家人' },
 ]
 
-export default function Bind() {
+export default function Bind({ user }) {
   const [email, setEmail] = useState('')
-  const [user, setUser] = useState(null)
+  const [foundUser, setFoundUser] = useState(null)
   const [type, setType] = useState('couple')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!user) {
+      if (window.confirm('伴侣绑定需要登录，是否去登录？')) {
+        navigate('/login')
+      } else {
+        navigate('/')
+      }
+    }
+  }, [user])
   const [success, setSuccess] = useState(false)
   const navigate = useNavigate()
 
   const handleSearch = async () => {
     setError('')
-    setUser(null)
+    setFoundUser(null)
     setLoading(true)
     try {
       const data = await api.searchUser(email)
       if (!data.user) return setError('未找到该用户')
-      setUser(data.user)
+      setFoundUser(data.user)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -36,7 +46,7 @@ export default function Bind() {
     setError('')
     setLoading(true)
     try {
-      await api.requestRelationship(user.id, type)
+      await api.requestRelationship(foundUser.id, type)
       setSuccess(true)
     } catch (err) {
       setError(err.message)
@@ -88,7 +98,7 @@ export default function Bind() {
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
-      {user && (
+      {foundUser && (
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center text-primary font-medium">

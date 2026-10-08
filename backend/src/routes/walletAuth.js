@@ -1,7 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { authQuery } = require('../db');
-const { issueToken, auth, hashPassword } = require('../lib/authz');
+const { issueToken, auth, hashPassword, packUser } = require('../lib/authz');
 const { defaultLimiter, loginByCodeLimiter } = require('../lib/limits');
 const { validateAddress, normalizeAddress, newChallengeId, buildSiweMessage, recoverAddress } = require('../lib/wallet-siwe');
 
@@ -39,7 +39,7 @@ async function createWalletUser(address) {
         'INSERT INTO ks_users (id, username, password_hash, nick_name, wallet_address) VALUES (?, ?, ?, ?, ?)',
         [id, username, placeholderHash, nickName, address]
       );
-      return { id, username, nick_name: nickName, email: null, avatar: null };
+      return { id, username, nick_name: nickName, email: null, avatar: null, wallet_address: address };
     } catch (err) {
       if (err.code !== 'ER_DUP_ENTRY' || attempt === 2) throw err;
     }
@@ -124,9 +124,62 @@ router.post('/api/auth/wallet/verify', loginByCodeLimiter, async (req, res) => {
     }
 
     const token = await issueToken(user);
-    res.json({ token, isNewUser, user: { id: user.id, username: user.username, nickName: user.nick_name, email: user.email, avatar: user.avatar } });
+    res.json({ token, isNewUser, user: packUser(user) });
   } catch (err) {
     console.error('[api] /auth/wallet/verify error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// 绑定钱包到当前登录账号（body 同 verify：challenge_id + address + signature）
+router.post('/api/auth/wallet/link', auth, defaultLimiter, async (req, res) => {
+  try {
+    const address = await consumeVerifiedAddress(req, res);
+    if (!address) return;
+
+    const existing = await findUserByWallet(address);
+    if (existing && existing.id !== req.user.id) {
+      return res.status(409).json({ error: '该钱包已绑定其他账号' });
+    }
+    if (existing) {
+      return res.json({ success: true, wallet_address: address });
+    }
+    try {
+      await authQuery('UPDATE ks_users SET wallet_address = ? WHERE id = ?', [address, req.user.id]);
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: '该钱包已绑定其他账号' });
+      }
+      throw err;
+    }
+    res.json({ success: true, wallet_address: address });
+  } catch (err) {
+    console.error('[api] /auth/wallet/link error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 解绑钱包：解绑后将无任何登录方式时拒绝（最后一个登录方式保护）
+router.post('/api/auth/wallet/unlink', auth, defaultLimiter, async (req, res) => {
+  try {
+    const rows = await authQuery(
+      'SELECT wallet_address, password_set_at, email FROM ks_users WHERE id = ? LIMIT 1',
+      [req.user.id]
+    );
+    const row = rows[0];
+    if (!row || !row.wallet_address) {
+      return res.status(400).json({ error: '当前账号没有绑定钱包' });
+    }
+    const hasPassword = !!row.password_set_at;
+    const hasEmail = !!row.email;
+    if (!hasPassword && !hasEmail) {
+      return res.status(400).json({ error: '这是最后一个登录方式，请先设置密码或绑定邮箱' });
+    }
+    await authQuery('UPDATE ks_users SET wallet_address = NULL WHERE id = ?', [req.user.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[api] /auth/wallet/unlink error:', err);
     res.status(500).json({ error: err.message });
   }
 });
