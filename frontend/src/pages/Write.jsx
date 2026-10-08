@@ -189,7 +189,7 @@ export default function Write({ user }) {
                   <button
                     key={opt.key}
                     onClick={() => toggleGroup(opt.key)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm " + (checked ? 'border-primary bg-primary-light text-primary' : 'border-stone-200 text-text-main')
+                    className={"w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm " + (checked ? 'border-primary bg-primary-light text-primary' : 'border-stone-200 text-text-main')}
                   >
                     <span>{opt.label}</span>
                     <span className={"w-5 h-5 rounded-full border flex items-center justify-center " + (checked ? 'bg-primary border-primary' : 'border-stone-300')}>
@@ -211,7 +211,7 @@ export default function Write({ user }) {
                   <button
                     key={opt.key}
                     onClick={() => selectExclusive(opt.key)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm " + (checked ? 'border-primary bg-primary-light text-primary' : 'border-stone-200 text-text-main')
+                    className={"w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm " + (checked ? 'border-primary bg-primary-light text-primary' : 'border-stone-200 text-text-main')}
                   >
                     <span>{opt.label}<span className="text-xs text-text-sub ml-1.5">{opt.desc}</span></span>
                     <span className={"w-5 h-5 rounded-full border flex items-center justify-center " + (checked ? 'bg-primary border-primary' : 'border-stone-300')}>
