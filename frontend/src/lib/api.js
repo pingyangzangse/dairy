@@ -62,6 +62,12 @@ export const api = {
   updateSettings: (body) => request('/api/user/settings', { method: 'PATCH', body: JSON.stringify(body) }),
   searchUser: (email) => request('/api/user/search?email=' + encodeURIComponent(email)),
   getUser: (id) => request('/api/user/' + id),
+  getUserDiaries: (id) => request('/api/user/' + id + '/diaries'),
+
+  // Follow
+  followUser: (id) => request('/api/follow/' + id, { method: 'POST' }),
+  unfollowUser: (id) => request('/api/unfollow/' + id, { method: 'POST' }),
+  getFollowStatus: (id) => request('/api/follow/' + id),
 
   // Relationship
   getRelationship: () => request('/api/relationship'),
@@ -74,6 +80,7 @@ export const api = {
   createDiary: (body) => request('/api/diaries', { method: 'POST', body: JSON.stringify(body) }),
   updateDiary: (id, body) => request('/api/diaries/' + id, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteDiary: (id) => request('/api/diaries/' + id, { method: 'DELETE' }),
+  getDiaryEdits: (id) => request('/api/diaries/' + id + '/edits'),
   getDiary: (id) => request('/api/diaries/' + id),
 
   // Comments
@@ -81,16 +88,8 @@ export const api = {
   addComment: (diaryId, content) => request('/api/diaries/' + diaryId + '/comments', { method: 'POST', body: JSON.stringify({ content }) }),
   deleteComment: (id) => request('/api/comments/' + id, { method: 'DELETE' }),
 
-  // Follow
-  follow: (userId) => request('/api/follow/' + userId, { method: 'POST' }),
-  unfollow: (userId) => request('/api/unfollow/' + userId, { method: 'POST' }),
-  isFollowing: (userId) => request('/api/follow/' + userId),
-
   // Feed
   feed: (mode = 'all', page = 1, pageSize = 10) => request('/api/feed?mode=' + mode + '&page=' + page + '&pageSize=' + pageSize),
-
-  // Diary delete
-  deleteDiary: (id) => request('/api/diaries/' + id, { method: 'DELETE' }),
 
   // Relationship extra
   getSentRequests: () => request('/api/relationship/sent'),

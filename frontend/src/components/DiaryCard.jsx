@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { parseImages } from '../lib/images'
 
@@ -19,21 +19,28 @@ function visibilityOf(raw) {
 }
 
 export default function DiaryCard({ diary }) {
+  const navigate = useNavigate()
+  const authorId = diary.author?.id || diary.author_id
+  const goAuthor = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (authorId) navigate('/users/' + authorId)
+  }
   const v = visibilityOf(diary.visibility)
   const images = parseImages(diary.images)
 
   return (
     <Link to={"/diaries/" + diary.id} className="block bg-white rounded-2xl p-4 mb-3 shadow-sm border border-stone-100">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-primary font-medium text-sm overflow-hidden">
+        <button onClick={goAuthor} className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-primary font-medium text-sm overflow-hidden flex-shrink-0">
           {diary.author?.avatar ? (
             <img src={diary.author.avatar} alt="" className="w-full h-full object-cover" />
           ) : (
             (diary.author?.nick_name || diary.author?.username || '?').slice(0, 1)
           )}
-        </div>
+        </button>
         <div className="flex-1">
-          <div className="text-sm font-medium text-text-main">{diary.author?.nick_name || diary.author?.username}</div>
+          <button onClick={goAuthor} className="text-sm font-medium text-text-main text-left">{diary.author?.nick_name || diary.author?.username}</button>
           <div className="text-xs text-muted">{dayjs(diary.created_at).format('YYYY-MM-DD HH:mm')}</div>
         </div>
         <span className={"text-xs px-2 py-1 rounded-full " + v.color}>{v.label}</span>

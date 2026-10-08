@@ -7,6 +7,7 @@ import Write from './pages/Write'
 import DiaryDetail from './pages/DiaryDetail'
 import Profile from './pages/Profile'
 import Bind from './pages/Bind'
+import UserProfile from './pages/UserProfile'
 import BottomNav from './components/BottomNav'
 import LoginModal from './components/LoginModal'
 import { LoginModalProvider } from './contexts/LoginModalContext'
@@ -60,6 +61,7 @@ function App() {
         <Route path="/diaries/:id" element={<DiaryDetail user={user} />} />
         <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} />} />
         <Route path="/bind" element={<Bind user={user} />} />
+        <Route path="/users/:id" element={<UserProfile user={user} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </main>

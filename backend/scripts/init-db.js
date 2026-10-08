@@ -30,6 +30,15 @@ CREATE TABLE IF NOT EXISTS diaries (
   INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS diary_edits (
+  id VARCHAR(64) PRIMARY KEY,
+  diary_id VARCHAR(64) NOT NULL,
+  editor_id VARCHAR(64) NOT NULL,
+  changes JSON NOT NULL COMMENT '[{field,from,to}]',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_diary (diary_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS comments (
   id VARCHAR(64) PRIMARY KEY,
   diary_id VARCHAR(64) NOT NULL,

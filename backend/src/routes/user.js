@@ -105,4 +105,42 @@ router.get('/api/user/:id', auth, defaultLimiter, async (req, res) => {
   }
 });
 
+// 用户主页的文章列表：作者本人看全部；其他人按可见群组过滤
+router.get('/api/user/:id/diaries', auth, defaultLimiter, async (req, res) => {
+  try {
+    const authorId = req.params.id;
+    const viewerId = req.user.id;
+    const pageSize = 50;
+
+    let where = 'author_id = ?';
+    const params = [authorId];
+
+    if (viewerId !== authorId) {
+      // 与作者的已接受关系类型 → 可见群组
+      const rels = await diaryQuery(
+        `SELECT type FROM relationships
+         WHERE ((requester_id = ? AND recipient_id = ?) OR (requester_id = ? AND recipient_id = ?))
+         AND status = 'accepted'`,
+        [viewerId, authorId, authorId, viewerId]
+      );
+      const groupMap = { couple: 'partner', friend: 'friend', family: 'family' };
+      const groups = rels.map(r => groupMap[r.type]).filter(Boolean);
+      const conditions = ["FIND_IN_SET('public', visibility)"];
+      for (const g of groups) {
+        conditions.push(`FIND_IN_SET('${g}', visibility)`);
+      }
+      where += ' AND (' + conditions.join(' OR ') + ')';
+    }
+
+    const diaries = await diaryQuery(
+      `SELECT * FROM diaries WHERE ${where} ORDER BY created_at DESC LIMIT ?`,
+      [...params, pageSize]
+    );
+    res.json({ diaries });
+  } catch (err) {
+    console.error('[api] /user/:id/diaries error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

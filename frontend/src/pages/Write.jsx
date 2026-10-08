@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useLoginModal } from '../contexts/LoginModalContext'
 
@@ -24,6 +24,11 @@ export default function Write({ user }) {
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [searchParams] = useSearchParams()
+  const editId = searchParams.get('edit')
+  const [editDiary, setEditDiary] = useState(null)
+  const [editsRemaining, setEditsRemaining] = useState(null)
+  const [editError, setEditError] = useState('')
   const fileRef = useRef()
   const textareaRef = useRef()
   const navigate = useNavigate()
@@ -33,6 +38,25 @@ export default function Write({ user }) {
       openLoginModal('写日记需要登录', () => navigate('/login'))
     }
   }, [user])
+
+  // 编辑模式：加载原日记并预填
+  useEffect(() => {
+    if (!editId || !user) return
+    api.getDiary(editId)
+      .then(data => {
+        const d = data.diary
+        if (!data.canEdit) {
+          setEditError('这篇日记已不可修改（超过 3 天或已达 3 次修改上限）')
+          return
+        }
+        setEditDiary(d)
+        setEditsRemaining(data.editsRemaining)
+        setTitle(d.title || '')
+        setContent(d.content || '')
+        setVisGroups(String(d.visibility || 'partner').split(',').map(s => s.trim()).filter(Boolean))
+      })
+      .catch(err => setEditError(err.message))
+  }, [editId, user])
 
   // 输入框随内容自动撑高（至少占屏高的 35%）
   useEffect(() => {
@@ -88,6 +112,11 @@ export default function Write({ user }) {
     setLoading(true)
     setError('')
     try {
+      if (editId) {
+        await api.updateDiary(editId, { title, content, visibility: visGroups })
+        navigate('/diaries/' + editId, { replace: true })
+        return
+      }
       await api.createDiary({ title, content, visibility: visGroups, images })
       navigate('/')
     } catch (err) {
@@ -97,16 +126,30 @@ export default function Write({ user }) {
     }
   }
 
+  if (editError) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#F5F5F0] p-4 text-center">
+        <p className="text-sm text-text-sub mb-4">{editError}</p>
+        <button onClick={() => navigate(-1)} className="px-5 py-2 bg-primary text-white rounded-full text-sm">返回</button>
+      </div>
+    )
+  }
+
   return (
     <div className="flex-1 bg-[#F5F5F0] p-4">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-text-main">写日记</h1>
+        <h1 className="text-xl font-semibold text-text-main">
+          {editId ? '编辑日记' : '写日记'}
+          {editId && editsRemaining !== null && (
+            <span className="text-xs font-normal text-text-sub ml-2">还可修改 {editsRemaining} 次</span>
+          )}
+        </h1>
         <button
           onClick={handleSubmit}
           disabled={loading}
           className="px-5 py-2 bg-primary text-white rounded-full text-sm font-medium disabled:opacity-50"
         >
-          {loading ? '发布中' : '发布'}
+          {loading ? '发布中' : (editId ? '保存' : '发布')}
         </button>
       </div>
 
@@ -129,7 +172,7 @@ export default function Write({ user }) {
           className="w-full resize-none text-sm leading-relaxed placeholder:text-stone-300 focus:outline-none overflow-hidden"
         />
 
-        {images.length > 0 && (
+        {!editId && images.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {images.map((url, idx) => (
               <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-stone-100">
@@ -146,6 +189,7 @@ export default function Write({ user }) {
         )}
 
         <div className="flex items-center justify-between gap-2 pt-2">
+          {!editId && (
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading || images.length >= 9}
@@ -156,11 +200,12 @@ export default function Write({ user }) {
             </svg>
             {uploading ? '上传中' : '添加图片'}
           </button>
+          )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
           <button
             onClick={() => setVisModalOpen(true)}
-            className="flex items-center gap-1 min-w-0 text-xs text-primary bg-primary-light rounded-full px-3 py-1.5"
+            className={"flex items-center gap-1 min-w-0 text-xs text-primary bg-primary-light rounded-full px-3 py-1.5 " + (editId ? 'ml-auto' : '')}
           >
             <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

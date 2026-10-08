@@ -5,6 +5,11 @@ import { parseImages } from '../lib/images'
 import { useLoginModal } from '../contexts/LoginModalContext'
 import dayjs from 'dayjs'
 
+function truncate(text, max = 60) {
+  const s = String(text || '')
+  return s.length > max ? s.slice(0, max) + '…' : s
+}
+
 export default function DiaryDetail({ user }) {
   const { openLoginModal } = useLoginModal()
   const { id } = useParams()
@@ -17,6 +22,9 @@ export default function DiaryDetail({ user }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [canEdit, setCanEdit] = useState(false)
+  const [editsRemaining, setEditsRemaining] = useState(0)
+  const [edits, setEdits] = useState([])
 
   useEffect(() => {
     loadDiary()
@@ -27,6 +35,13 @@ export default function DiaryDetail({ user }) {
     try {
       const data = await api.getDiary(id)
       setDiary(data.diary)
+      setCanEdit(!!data.canEdit)
+      setEditsRemaining(data.editsRemaining || 0)
+      if ((data.diary.edit_count || 0) > 0) {
+        api.getDiaryEdits(id)
+          .then(res => setEdits(res.edits || []))
+          .catch(() => {})
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -85,6 +100,14 @@ export default function DiaryDetail({ user }) {
       <div className="bg-white px-5 py-6 border-b border-stone-100">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate(-1)} className="text-sm text-text-sub">← 返回</button>
+          {canEdit && (
+            <button
+              onClick={() => navigate('/write?edit=' + diary.id)}
+              className="text-xs px-3 py-1.5 rounded-full border border-primary text-primary mr-2"
+            >
+              编辑{editsRemaining > 0 ? '（还可改 ' + editsRemaining + ' 次）' : ''}
+            </button>
+          )}
           {user && diary && user.id === diary.author_id && (
             <button
               onClick={handleDelete}
@@ -97,7 +120,10 @@ export default function DiaryDetail({ user }) {
         </div>
         {actionError && <p className="text-xs text-red-500 mb-2">{actionError}</p>}
         <h1 className="text-xl font-semibold text-text-main mb-3">{diary.title}</h1>
-        <p className="text-sm text-text-sub mb-4">{dayjs(diary.created_at).format('YYYY-MM-DD HH:mm')}</p>
+        <p className="text-sm text-text-sub mb-4">
+          {dayjs(diary.created_at).format('YYYY-MM-DD HH:mm')}
+          {(diary.edit_count || 0) > 0 && <span className="ml-2 text-xs text-muted">（已编辑 {diary.edit_count} 次）</span>}
+        </p>
         <div className="text-sm text-text-main leading-relaxed whitespace-pre-line mb-4">{diary.content}</div>
         {parseImages(diary.images).length > 0 && (
           <div className="grid grid-cols-2 gap-2">
@@ -124,6 +150,32 @@ export default function DiaryDetail({ user }) {
           ))}
           {comments.length === 0 && <p className="text-sm text-text-sub text-center py-4">暂无评论</p>}
         </div>
+
+        {edits.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-medium text-text-main mb-3">修改记录</h3>
+            <div className="bg-stone-50 rounded-xl p-4 space-y-2.5">
+              {edits.map((edit) => (
+                <div key={edit.id} className="text-xs text-text-sub leading-relaxed">
+                  <span className="text-muted">{dayjs(edit.created_at).format('MM-DD HH:mm')}</span>
+                  {(Array.isArray(edit.changes) ? edit.changes : []).map((chg, i) => (
+                    <div key={i} className="mt-1">
+                      {chg.field === 'title' && (
+                        <>修改了标题：「{truncate(chg.from)}」→「{truncate(chg.to)}」</>
+                      )}
+                      {chg.field === 'content' && (
+                        <>修改了内容：「{truncate(chg.from)}」→「{truncate(chg.to)}」</>
+                      )}
+                      {chg.field === 'visibility' && (
+                        <>修改了可见范围：{chg.from} → {chg.to}</>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleComment} className="flex gap-2">
           <input
