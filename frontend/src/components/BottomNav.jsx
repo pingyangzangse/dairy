@@ -1,7 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useLoginModal } from '../contexts/LoginModalContext'
 
 export default function BottomNav({ user }) {
   const navigate = useNavigate()
+  const { openLoginModal } = useLoginModal()
 
   const items = [
     { to: '/', label: '广场', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -12,9 +14,7 @@ export default function BottomNav({ user }) {
   const handleClick = (to) => (e) => {
     if (!user && (to === '/bind' || to === '/profile')) {
       e.preventDefault()
-      if (window.confirm('该功能需要登录后才能使用，是否去登录？')) {
-        navigate('/login')
-      }
+      openLoginModal('该功能需要登录后才能使用')
     }
   }
 

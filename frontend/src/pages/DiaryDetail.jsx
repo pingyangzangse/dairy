@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { useLoginModal } from '../contexts/LoginModalContext'
 import dayjs from 'dayjs'
 
 export default function DiaryDetail({ user }) {
+  const { openLoginModal } = useLoginModal()
   const { id } = useParams()
   const navigate = useNavigate()
   const [diary, setDiary] = useState(null)
@@ -40,9 +42,7 @@ export default function DiaryDetail({ user }) {
   const handleComment = async (e) => {
     e.preventDefault()
     if (!user) {
-      if (window.confirm('评论需要登录，是否去登录？')) {
-        navigate('/login')
-      }
+      openLoginModal('评论需要登录')
       return
     }
     if (!commentText.trim()) return

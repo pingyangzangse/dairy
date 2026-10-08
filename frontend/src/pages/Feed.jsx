@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { useLoginModal } from '../contexts/LoginModalContext'
 import DiaryCard from '../components/DiaryCard'
 
 export default function Feed({ user }) {
   const navigate = useNavigate()
+  const { openLoginModal } = useLoginModal()
   const [mode, setMode] = useState('all')
   const [diaries, setDiaries] = useState([])
   const [page, setPage] = useState(1)
@@ -46,9 +48,7 @@ export default function Feed({ user }) {
 
   const handleModeChange = (key) => {
     if ((key === 'following' || key === 'partner') && !user) {
-      if (window.confirm('该功能需要登录后才能使用，是否去登录？')) {
-        navigate('/login')
-      }
+      openLoginModal('该功能需要登录后才能使用')
       return
     }
     setMode(key)
@@ -56,9 +56,7 @@ export default function Feed({ user }) {
 
   const handleWrite = () => {
     if (!user) {
-      if (window.confirm('写日记需要登录，是否去登录？')) {
-        navigate('/login')
-      }
+      openLoginModal('写日记需要登录')
       return
     }
     navigate('/write')

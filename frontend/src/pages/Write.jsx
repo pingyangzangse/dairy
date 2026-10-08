@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { useLoginModal } from '../contexts/LoginModalContext'
 
 const visibilityOptions = [
   { key: 'partner', label: '仅伴侣可见' },
@@ -9,6 +10,7 @@ const visibilityOptions = [
 ]
 
 export default function Write({ user }) {
+  const { openLoginModal } = useLoginModal()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [visibility, setVisibility] = useState('partner')
@@ -19,11 +21,7 @@ export default function Write({ user }) {
 
   useEffect(() => {
     if (!user) {
-      if (window.confirm('写日记需要登录，是否去登录？')) {
-        navigate('/login')
-      } else {
-        navigate('/')
-      }
+      openLoginModal('写日记需要登录', () => navigate('/login'))
     }
   }, [user])
   const fileRef = useRef()

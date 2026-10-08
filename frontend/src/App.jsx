@@ -8,6 +8,8 @@ import DiaryDetail from './pages/DiaryDetail'
 import Profile from './pages/Profile'
 import Bind from './pages/Bind'
 import BottomNav from './components/BottomNav'
+import LoginModal from './components/LoginModal'
+import { LoginModalProvider } from './contexts/LoginModalContext'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -48,6 +50,7 @@ function App() {
   const isLoginPage = location.pathname === '/login'
 
   return (
+    <LoginModalProvider>
     <div className="min-h-screen bg-surface pb-20">
       <Routes>
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
@@ -59,7 +62,9 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {!isLoginPage && <BottomNav user={user} />}
+      <LoginModal />
     </div>
+    </LoginModalProvider>
   )
 }
 

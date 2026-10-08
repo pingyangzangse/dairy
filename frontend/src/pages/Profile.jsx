@@ -1,21 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { useLoginModal } from '../contexts/LoginModalContext'
 import { requestAccount, signMessage, discoverWallets, createWalletConnectProvider } from '../lib/wallet'
 
 export default function Profile({ user, onLogout }) {
   const navigate = useNavigate()
+  const { openLoginModal } = useLoginModal()
   const [profile, setProfile] = useState(user)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (!user) {
-      if (window.confirm('该功能需要登录后才能使用，是否去登录？')) {
-        navigate('/login')
-      } else {
-        navigate('/')
-      }
+      openLoginModal('该功能需要登录后才能使用', () => navigate('/login'))
       return
     }
     loadData()

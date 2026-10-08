@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { useLoginModal } from '../contexts/LoginModalContext'
 
 const typeOptions = [
   { key: 'couple', label: '情侣' },
@@ -9,6 +10,7 @@ const typeOptions = [
 ]
 
 export default function Bind({ user }) {
+  const { openLoginModal } = useLoginModal()
   const [email, setEmail] = useState('')
   const [foundUser, setFoundUser] = useState(null)
   const [type, setType] = useState('couple')
@@ -17,11 +19,7 @@ export default function Bind({ user }) {
 
   useEffect(() => {
     if (!user) {
-      if (window.confirm('伴侣绑定需要登录，是否去登录？')) {
-        navigate('/login')
-      } else {
-        navigate('/')
-      }
+      openLoginModal('伴侣绑定需要登录', () => navigate('/login'))
     }
   }, [user])
   const [success, setSuccess] = useState(false)
