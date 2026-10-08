@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
+import { parseImages } from '../lib/images'
 
 const visibilityMap = {
   public: { label: '公开', color: 'bg-stone-100 text-stone-600' },
@@ -9,10 +10,10 @@ const visibilityMap = {
 
 export default function DiaryCard({ diary }) {
   const v = visibilityMap[diary.visibility] || visibilityMap.public
-  const images = diary.images ? JSON.parse(diary.images) : []
+  const images = parseImages(diary.images)
 
   return (
-    <Link to={"/diary/" + diary.id} className="block bg-white rounded-2xl p-4 mb-3 shadow-sm border border-stone-100">
+    <Link to={"/diaries/" + diary.id} className="block bg-white rounded-2xl p-4 mb-3 shadow-sm border border-stone-100">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-primary font-medium text-sm overflow-hidden">
           {diary.author?.avatar ? (

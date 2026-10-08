@@ -107,7 +107,7 @@ export default function Profile({ user, onLogout }) {
               src={profile?.avatar || '/default-avatar.png'}
               alt="avatar"
               className="w-16 h-16 rounded-full object-cover bg-stone-100"
-              onError={e => { e.target.src = '/default-avatar.png' }}
+              onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = '/default-avatar.png' }}
             />
             <label className="absolute bottom-0 right-0 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-[10px]">
               换

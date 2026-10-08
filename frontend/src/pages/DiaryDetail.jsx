@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { parseImages } from '../lib/images'
 import { useLoginModal } from '../contexts/LoginModalContext'
 import dayjs from 'dayjs'
 
@@ -66,9 +67,9 @@ export default function DiaryDetail({ user }) {
         <h1 className="text-xl font-semibold text-text-main mb-3">{diary.title}</h1>
         <p className="text-sm text-text-sub mb-4">{dayjs(diary.created_at).format('YYYY-MM-DD HH:mm')}</p>
         <div className="text-sm text-text-main leading-relaxed whitespace-pre-line mb-4">{diary.content}</div>
-        {diary.images && diary.images.length > 0 && (
+        {parseImages(diary.images).length > 0 && (
           <div className="grid grid-cols-2 gap-2">
-            {diary.images.map((img, idx) => (
+            {parseImages(diary.images).map((img, idx) => (
               <img key={idx} src={img} alt="" className="rounded-xl w-full h-40 object-cover" />
             ))}
           </div>
