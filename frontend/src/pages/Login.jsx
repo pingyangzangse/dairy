@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { discoverWallets, requestAccount, signMessage, createWalletConnectProvider } from '../lib/wallet'
@@ -17,6 +17,7 @@ export default function Login({ onLogin }) {
 
   const [wallets, setWallets] = useState([])
   const [wcLoading, setWcLoading] = useState(false)
+  const busyRef = useRef(false)
 
   useEffect(() => {
     if (mode !== 'wallet') return
@@ -27,8 +28,15 @@ export default function Login({ onLogin }) {
     return () => { mounted = false }
   }, [mode])
 
+  const finishLogin = (data) => {
+    onLogin(data)
+    navigate('/', { replace: true })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (busyRef.current) return
+    busyRef.current = true
     setError('')
     setSuccess('')
     setLoading(true)
@@ -41,16 +49,19 @@ export default function Login({ onLogin }) {
       } else {
         data = await api.register(identifier, password, nickName)
       }
-      onLogin(data)
+      finishLogin(data)
     } catch (err) {
       setError(err.message)
     } finally {
+      busyRef.current = false
       setLoading(false)
     }
   }
 
   const handleSendCode = async () => {
     if (!identifier) return setError('请输入邮箱')
+    if (busyRef.current) return
+    busyRef.current = true
     setSending(true)
     setError('')
     try {
@@ -59,6 +70,7 @@ export default function Login({ onLogin }) {
     } catch (err) {
       setError(err.message)
     } finally {
+      busyRef.current = false
       setSending(false)
     }
   }
@@ -71,7 +83,7 @@ export default function Login({ onLogin }) {
       const { challenge_id, message } = await api.walletChallenge(address)
       const signature = await signMessage(provider, address, message)
       const data = await api.walletVerify({ challenge_id, address, signature })
-      onLogin(data)
+      finishLogin(data)
     } catch (err) {
       if (err?.code === 4001) return setError('你取消了签名')
       setError(err.message || '钱包登录失败')
@@ -92,7 +104,7 @@ export default function Login({ onLogin }) {
       const { challenge_id, message } = await api.walletChallenge(address)
       const signature = await signMessage(provider, address, message)
       const data = await api.walletVerify({ challenge_id, address, signature })
-      onLogin(data)
+      finishLogin(data)
     } catch (err) {
       if (err?.message?.includes('rejected') || err?.code === 5000) return setError('你取消了连接')
       setError(err.message || '扫码登录失败')
@@ -178,7 +190,7 @@ export default function Login({ onLogin }) {
                       type="text"
                       value={code}
                       onChange={e => setCode(e.target.value)}
-                      className="flex-1 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 focus:border-primary focus:outline-none text-sm"
+                      className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 focus:border-primary focus:outline-none text-sm"
                       placeholder="6 位数字"
                       maxLength={6}
                       required
