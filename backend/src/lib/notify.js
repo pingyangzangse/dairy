@@ -20,6 +20,7 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 const PUSH_TEXT = {
   comment: (name, excerpt) => ({ title: '新评论', body: name + ' 评论了你的日记' + (excerpt ? '：' + excerpt : '') }),
+  reply: (name, excerpt) => ({ title: '新回复', body: name + ' 回复了你的评论' + (excerpt ? '：' + excerpt : '') }),
   relationship_request: (name, excerpt) => ({ title: '绑定申请', body: name + ' 请求与你绑定为「' + (excerpt || '') + '」' }),
   relationship_accepted: (name) => ({ title: '绑定成功', body: name + ' 同意了你的绑定申请' }),
 };
@@ -31,7 +32,7 @@ async function pushToUser(userId, actorName, type, diaryId, excerpt) {
     const build = PUSH_TEXT[type];
     if (!build) return;
     const { title, body } = build(actorName, excerpt);
-    const url = type === 'comment' && diaryId ? '/diaries/' + diaryId : '/bind';
+    const url = (type === 'comment' || type === 'reply') && diaryId ? '/diaries/' + diaryId : '/bind';
     const payload = JSON.stringify({ title, body, url });
     const subs = await diaryQuery('SELECT * FROM push_subscriptions WHERE user_id = ?', [userId]);
     for (const s of subs) {
@@ -53,6 +54,7 @@ async function pushToUser(userId, actorName, type, diaryId, excerpt) {
 
 const NOTIFY_TYPE = {
   COMMENT: 'comment',
+  REPLY: 'reply',
   REL_REQUEST: 'relationship_request',
   REL_ACCEPTED: 'relationship_accepted',
 };
@@ -88,7 +90,7 @@ async function notify({ userId, actorId, type, diaryId = null, excerpt = null })
       const build = PUSH_TEXT[type];
       if (!build) return;
       const { title, body } = build(actorName, excerpt ? String(excerpt).slice(0, 80) : null);
-      const link = type === 'comment' && diaryId ? site + '/diaries/' + diaryId : site + '/bind';
+      const link = (type === 'comment' || type === 'reply') && diaryId ? site + '/diaries/' + diaryId : site + '/bind';
       await mailer.sendNotice(email, '【日记】' + title, [body], link);
     } catch (err) {
       console.error('[notify] 邮件提醒失败:', err.message);

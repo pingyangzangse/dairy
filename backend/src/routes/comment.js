@@ -43,7 +43,7 @@ router.get('/api/diaries/:id/comments', auth, defaultLimiter, async (req, res) =
 // 发表评论
 router.post('/api/diaries/:id/comments', auth, defaultLimiter, async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, parent_id } = req.body;
     if (!content || String(content).trim().length === 0) {
       return res.status(400).json({ error: '评论内容不能为空' });
     }
@@ -51,10 +51,20 @@ router.post('/api/diaries/:id/comments', auth, defaultLimiter, async (req, res) 
     const diary = await diaryQueryOne('SELECT * FROM diaries WHERE id = ?', [req.params.id]);
     if (!diary) return res.status(404).json({ error: '日记不存在' });
 
+    // 回复目标校验：父评论必须存在且属于同一篇日记
+    let parent = null;
+    if (parent_id) {
+      parent = await diaryQueryOne(
+        'SELECT * FROM comments WHERE id = ? AND diary_id = ? LIMIT 1',
+        [parent_id, req.params.id]
+      );
+      if (!parent) return res.status(400).json({ error: '回复的评论不存在' });
+    }
+
     const id = crypto.randomUUID();
     await diaryInsert(
-      'INSERT INTO comments (id, diary_id, author_id, content) VALUES (?, ?, ?, ?)',
-      [id, req.params.id, req.user.id, content]
+      'INSERT INTO comments (id, diary_id, author_id, parent_id, content) VALUES (?, ?, ?, ?, ?)',
+      [id, req.params.id, req.user.id, parent ? parent.id : null, content]
     );
 
     // 给日记作者发评论提醒（自己评论自己不提醒，notify 内部已判）
@@ -65,12 +75,23 @@ router.post('/api/diaries/:id/comments', auth, defaultLimiter, async (req, res) 
       diaryId: diary.id,
       excerpt: String(content).slice(0, 80),
     });
+
+    // 回复评论：提醒被回复人（被回复人就是日记作者时，上面的评论提醒已覆盖，不重复发）
+    if (parent && parent.author_id !== diary.author_id) {
+      await notify({
+        userId: parent.author_id,
+        actorId: req.user.id,
+        type: NOTIFY_TYPE.REPLY,
+        diaryId: diary.id,
+        excerpt: String(content).slice(0, 80),
+      });
+    }
     const rows = await authQuery(
       'SELECT id, username, nick_name, avatar FROM ks_users WHERE id = ? LIMIT 1',
       [req.user.id]
     );
     const u = rows[0] || {};
-    res.json({ success: true, comment: { id, diary_id: req.params.id, author_id: req.user.id, content, created_at: new Date(), username: u.username, nick_name: u.nick_name, avatar: u.avatar } });
+    res.json({ success: true, comment: { id, diary_id: req.params.id, author_id: req.user.id, parent_id: parent ? parent.id : null, content, created_at: new Date(), username: u.username, nick_name: u.nick_name, avatar: u.avatar } });
   } catch (err) {
     console.error('[api] POST /diaries/:id/comments error:', err);
     res.status(500).json({ error: err.message });
@@ -83,6 +104,7 @@ router.delete('/api/comments/:id', auth, defaultLimiter, async (req, res) => {
     const comment = await diaryQueryOne('SELECT * FROM comments WHERE id = ?', [req.params.id]);
     if (!comment) return res.status(404).json({ error: '评论不存在' });
     if (comment.author_id !== req.user.id) return res.status(403).json({ error: '无权删除' });
+    await diaryQuery('DELETE FROM comments WHERE parent_id = ?', [req.params.id]);
     await diaryQuery('DELETE FROM comments WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {

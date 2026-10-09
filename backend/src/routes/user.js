@@ -132,6 +132,20 @@ router.get('/api/user/:id/diaries', auth, defaultLimiter, async (req, res) => {
       where += ' AND (' + conditions.join(' OR ') + ')';
     }
 
+    // 时间筛选：某一天发布的日记
+    const date = String(req.query.date || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      where += ' AND DATE(created_at) = ?';
+      params.push(date);
+    }
+    // 分类筛选：可见群组（单个）
+    const VIS_FILTERS = new Set(['public', 'partner', 'friend', 'family', 'private']);
+    const visFilter = String(req.query.visibility || '').trim();
+    if (VIS_FILTERS.has(visFilter)) {
+      where += ' AND FIND_IN_SET(?, visibility)';
+      params.push(visFilter);
+    }
+
     const diaries = await diaryQuery(
       `SELECT * FROM diaries WHERE ${where} ORDER BY created_at DESC LIMIT ?`,
       [...params, pageSize]
@@ -139,6 +153,36 @@ router.get('/api/user/:id/diaries', auth, defaultLimiter, async (req, res) => {
     res.json({ diaries });
   } catch (err) {
     console.error('[api] /user/:id/diaries error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 按月统计每天发布的日记数（日历用；仅本人可查，包含私密日记）
+router.get('/api/user/:id/diary-days', auth, defaultLimiter, async (req, res) => {
+  try {
+    if (req.user.id !== req.params.id) {
+      return res.status(403).json({ error: '只能查看自己的日历' });
+    }
+    const year = parseInt(req.query.year, 10);
+    const month = parseInt(req.query.month, 10);
+    if (!year || !month || month < 1 || month > 12) {
+      return res.status(400).json({ error: '参数错误' });
+    }
+    const start = String(year) + '-' + String(month).padStart(2, '0') + '-01';
+    const rows = await diaryQuery(
+      `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COUNT(*) AS count
+       FROM diaries
+       WHERE author_id = ? AND created_at >= ? AND created_at < ? + INTERVAL 1 MONTH
+       GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')`,
+      [req.user.id, start, start]
+    );
+    const days = {};
+    for (const r of rows) {
+      days[String(r.day)] = Number(r.count);
+    }
+    res.json({ days });
+  } catch (err) {
+    console.error('[api] /user/:id/diary-days error:', err);
     res.status(500).json({ error: err.message });
   }
 });

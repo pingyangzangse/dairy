@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import dayjs from 'dayjs'
 import { api } from '../lib/api'
 import { useLoginModal } from '../contexts/LoginModalContext'
 import DiaryCard from '../components/DiaryCard'
@@ -15,6 +16,9 @@ export default function UserProfile({ user }) {
   const [loading, setLoading] = useState(true)
   const [followLoading, setFollowLoading] = useState(false)
   const [error, setError] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const dateFilter = searchParams.get('date') || ''
+  const [visFilter, setVisFilter] = useState('')
 
   const isSelf = user && user.id === id
 
@@ -24,7 +28,7 @@ export default function UserProfile({ user }) {
       return
     }
     loadData()
-  }, [id, user])
+  }, [id, user, dateFilter, visFilter])
 
   async function loadData() {
     setLoading(true)
@@ -32,7 +36,7 @@ export default function UserProfile({ user }) {
     try {
       const [userInfo, diariesData, followData] = await Promise.all([
         api.getUser(id),
-        api.getUserDiaries(id),
+        api.getUserDiaries(id, { date: dateFilter, visibility: visFilter || undefined }),
         api.getFollowStatus(id).catch(() => ({ isFollowing: false })),
       ])
       setProfile(userInfo)
@@ -107,8 +111,47 @@ export default function UserProfile({ user }) {
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={e => {
+              const v = e.target.value
+              setSearchParams(v ? { date: v } : {})
+            }}
+            className="text-xs px-3 py-1.5 rounded-full bg-white border border-stone-200 text-text-sub focus:outline-none focus:border-primary"
+          />
+          {dateFilter && (
+            <button
+              onClick={() => setSearchParams({})}
+              className="text-xs px-2.5 py-1.5 rounded-full bg-primary-light text-primary flex items-center gap-1"
+            >
+              {dayjs(dateFilter).format('M月D日')} ✕
+            </button>
+          )}
+          <span className="w-px h-4 bg-stone-200" />
+          {[
+            { key: '', label: '全部' },
+            { key: 'public', label: '公开' },
+            { key: 'partner', label: '伴侣' },
+            { key: 'friend', label: '朋友' },
+            { key: 'family', label: '家人' },
+            { key: 'private', label: '仅自己' },
+          ].map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setVisFilter(opt.key)}
+              className={"text-xs px-3 py-1.5 rounded-full " + (visFilter === opt.key ? 'bg-primary text-white' : 'bg-white text-text-sub border border-stone-100')}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         {diaries.length === 0 ? (
-          <div className="text-center py-12 text-text-sub text-sm">TA 还没有公开可见的日记</div>
+          <div className="text-center py-12 text-text-sub text-sm">
+            {(dateFilter || visFilter) ? '该筛选条件下没有日记' : (isSelf ? '还没有日记，去写第一篇吧' : 'TA 还没有公开可见的日记')}
+          </div>
         ) : (
           diaries.map(diary => <DiaryCard key={diary.id} diary={diary} />)
         )}

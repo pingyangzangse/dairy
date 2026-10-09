@@ -62,7 +62,14 @@ export const api = {
   updateSettings: (body) => request('/api/user/settings', { method: 'PATCH', body: JSON.stringify(body) }),
   searchUser: (email) => request('/api/user/search?email=' + encodeURIComponent(email)),
   getUser: (id) => request('/api/user/' + id),
-  getUserDiaries: (id) => request('/api/user/' + id + '/diaries'),
+  getUserDiaries: (id, { date, visibility } = {}) => {
+    const qs = new URLSearchParams()
+    if (date) qs.set('date', date)
+    if (visibility) qs.set('visibility', visibility)
+    const suffix = qs.toString() ? '?' + qs.toString() : ''
+    return request('/api/user/' + id + '/diaries' + suffix)
+  },
+  getDiaryDays: (id, year, month) => request('/api/user/' + id + '/diary-days?year=' + year + '&month=' + month),
 
   // Follow
   followUser: (id) => request('/api/follow/' + id, { method: 'POST' }),
@@ -85,7 +92,7 @@ export const api = {
 
   // Comments
   getComments: (diaryId) => request('/api/diaries/' + diaryId + '/comments'),
-  addComment: (diaryId, content) => request('/api/diaries/' + diaryId + '/comments', { method: 'POST', body: JSON.stringify({ content }) }),
+  addComment: (diaryId, content, parentId) => request('/api/diaries/' + diaryId + '/comments', { method: 'POST', body: JSON.stringify({ content, parent_id: parentId || null }) }),
   deleteComment: (id) => request('/api/comments/' + id, { method: 'DELETE' }),
 
   // Feed

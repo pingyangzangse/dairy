@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useLoginModal } from '../contexts/LoginModalContext'
 import PageHeader from '../components/PageHeader'
+import DiaryCalendar from '../components/DiaryCalendar'
 import { pushSupported, getPushState, enablePush, disablePush } from '../lib/push'
 import dayjs from 'dayjs'
 import { requestAccount, signMessage, discoverWallets, connectWalletConnect, retryOnNetwork } from '../lib/wallet'
@@ -253,6 +254,8 @@ export default function Profile({ user, onLogout }) {
         </div>
       </div>
 
+
+      {user && <DiaryCalendar userId={user.id} />}
 
       <div className="bg-white rounded-2xl border border-stone-100 mb-4 overflow-hidden">
         <button

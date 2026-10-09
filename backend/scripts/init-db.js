@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS comments (
   id VARCHAR(64) PRIMARY KEY,
   diary_id VARCHAR(64) NOT NULL,
   author_id VARCHAR(64) NOT NULL,
+  parent_id VARCHAR(64) DEFAULT NULL COMMENT '父评论（回复指向）',
   content TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_diary (diary_id),
@@ -94,6 +95,14 @@ async function main() {
   for (const statement of SCHEMA.split(';').map(s => s.trim()).filter(Boolean)) {
     await diaryQuery(statement + ';');
   }
+  // 老表迁移：comments 补 parent_id
+  try {
+    await diaryQuery("ALTER TABLE comments ADD COLUMN parent_id VARCHAR(64) DEFAULT NULL COMMENT '父评论（回复指向）'");
+    console.log('[init-db] comments 表新增 parent_id 列');
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+  }
+
   console.log('[init-db] 日记业务表初始化完成');
 }
 
