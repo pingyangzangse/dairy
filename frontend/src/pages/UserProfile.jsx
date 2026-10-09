@@ -19,6 +19,7 @@ export default function UserProfile({ user }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const dateFilter = searchParams.get('date') || ''
   const [visFilter, setVisFilter] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const isSelf = user && user.id === id
 
@@ -97,7 +98,7 @@ export default function UserProfile({ user }) {
             )}
             <div className="flex-1 min-w-0">
               <p className="text-lg font-semibold text-text-main truncate">{name}</p>
-              <p className="text-xs text-text-sub mt-0.5">{diaries.length} 篇日记</p>
+              <p className="text-xs text-text-sub mt-0.5">{diaries.length} 篇日记 · 积分 {profile.points ?? 0}</p>
             </div>
             {!isSelf && (
               <button
@@ -112,40 +113,36 @@ export default function UserProfile({ user }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={e => {
-              const v = e.target.value
-              setSearchParams(v ? { date: v } : {})
-            }}
-            className="text-xs px-3 py-1.5 rounded-full bg-white border border-stone-200 text-text-sub focus:outline-none focus:border-primary"
-          />
+          <button
+            onClick={() => setFilterOpen(true)}
+            className="flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs bg-white border border-stone-200 text-text-main"
+          >
+            <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 12h10m-7 8h4" />
+            </svg>
+            筛选
+            <svg className="w-3 h-3 text-text-sub" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
           {dateFilter && (
+            <span className="text-xs px-2.5 py-1.5 rounded-full bg-primary-light text-primary">
+              {dayjs(dateFilter).format('M月D日')}
+            </span>
+          )}
+          {visFilter && (
+            <span className="text-xs px-2.5 py-1.5 rounded-full bg-primary-light text-primary">
+              {{ public: '公开', partner: '伴侣', friend: '朋友', family: '家人', private: '仅自己' }[visFilter]}
+            </span>
+          )}
+          {(dateFilter || visFilter) && (
             <button
-              onClick={() => setSearchParams({})}
-              className="text-xs px-2.5 py-1.5 rounded-full bg-primary-light text-primary flex items-center gap-1"
+              onClick={() => { setSearchParams({}); setVisFilter('') }}
+              className="text-xs text-text-sub underline underline-offset-2"
             >
-              {dayjs(dateFilter).format('M月D日')} ✕
+              清除
             </button>
           )}
-          <span className="w-px h-4 bg-stone-200" />
-          {[
-            { key: '', label: '全部' },
-            { key: 'public', label: '公开' },
-            { key: 'partner', label: '伴侣' },
-            { key: 'friend', label: '朋友' },
-            { key: 'family', label: '家人' },
-            { key: 'private', label: '仅自己' },
-          ].map(opt => (
-            <button
-              key={opt.key}
-              onClick={() => setVisFilter(opt.key)}
-              className={"text-xs px-3 py-1.5 rounded-full " + (visFilter === opt.key ? 'bg-primary text-white' : 'bg-white text-text-sub border border-stone-100')}
-            >
-              {opt.label}
-            </button>
-          ))}
         </div>
 
         {diaries.length === 0 ? (
@@ -156,6 +153,61 @@ export default function UserProfile({ user }) {
           diaries.map(diary => <DiaryCard key={diary.id} diary={diary} />)
         )}
       </div>
+
+      {filterOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setFilterOpen(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative w-full max-w-md bg-white rounded-t-3xl p-5 pb-8" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-stone-200 rounded-full mx-auto mb-4" />
+            <h3 className="text-base font-semibold text-text-main mb-4">筛选日记</h3>
+
+            <p className="text-xs text-text-sub mb-2">时间</p>
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={e => setSearchParams(e.target.value ? { date: e.target.value } : {})}
+                className="flex-1 text-sm px-4 py-2.5 rounded-xl bg-stone-50 border border-stone-200 text-text-main focus:outline-none focus:border-primary"
+              />
+              {dateFilter && (
+                <button
+                  onClick={() => setSearchParams({})}
+                  className="text-xs px-3 py-2.5 rounded-xl bg-stone-100 text-text-sub"
+                >
+                  清除
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs text-text-sub mb-2">分类（可查看范围）</p>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {[
+                { key: '', label: '全部' },
+                { key: 'public', label: '公开' },
+                { key: 'partner', label: '伴侣' },
+                { key: 'friend', label: '朋友' },
+                { key: 'family', label: '家人' },
+                { key: 'private', label: '仅自己' },
+              ].map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setVisFilter(opt.key)}
+                  className={"px-4 py-2 rounded-full text-sm " + (visFilter === opt.key ? 'bg-primary text-white' : 'bg-stone-100 text-text-sub')}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setFilterOpen(false)}
+              className="w-full py-3 bg-primary text-white rounded-xl text-sm font-medium"
+            >
+              完成
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

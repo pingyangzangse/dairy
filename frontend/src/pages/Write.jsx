@@ -117,8 +117,12 @@ export default function Write({ user }) {
         navigate('/diaries/' + editId, { replace: true })
         return
       }
-      await api.createDiary({ title, content, visibility: visGroups, images })
-      navigate('/')
+      const result = await api.createDiary({ title, content, visibility: visGroups, images })
+      if (result.earnedPoint) {
+        navigate('/', { state: { toast: '长文日记 +1 积分！' } })
+      } else {
+        navigate('/')
+      }
     } catch (err) {
       setError(err.message)
     } finally {

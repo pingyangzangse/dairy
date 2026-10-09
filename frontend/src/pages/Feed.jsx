@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useLoginModal } from '../contexts/LoginModalContext'
 import DiaryCard from '../components/DiaryCard'
@@ -8,12 +8,23 @@ import PageHeader from '../components/PageHeader'
 export default function Feed({ user }) {
   const navigate = useNavigate()
   const { openLoginModal } = useLoginModal()
+  const location = useLocation()
+  const [toast, setToast] = useState(location.state?.toast || '')
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(''), 3000)
+      window.history.replaceState({}, '')
+      return () => clearTimeout(t)
+    }
+  }, [toast])
   const [mode, setMode] = useState('all')
   const [diaries, setDiaries] = useState([])
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const modes = [
     { key: 'all', label: '广场' },
@@ -55,7 +66,10 @@ export default function Feed({ user }) {
       return
     }
     setMode(key)
+    setFilterOpen(false)
   }
+
+  const currentLabel = modes.find(m => m.key === mode)?.label || '广场'
 
   const handleWrite = () => {
     if (!user) {
@@ -80,21 +94,27 @@ export default function Feed({ user }) {
           }
         />
         <div className="px-4 pb-3">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-            {modes.map(m => (
-            <button
-              key={m.key}
-              onClick={() => handleModeChange(m.key)}
-              className={"flex-shrink-0 whitespace-nowrap px-4 py-1.5 rounded-full text-sm " + (mode === m.key ? 'bg-primary text-white' : 'bg-white text-text-sub border border-stone-100')}
-            >
-              {m.label}
-            </button>
-          ))}
-          </div>
+          <button
+            onClick={() => setFilterOpen(true)}
+            className="flex items-center gap-1 px-3.5 py-1.5 rounded-full text-sm bg-white border border-stone-200 text-text-main"
+          >
+            <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 12h10m-7 8h4" />
+            </svg>
+            {currentLabel}
+            <svg className="w-3 h-3 text-text-sub" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
       </div>
 
       <div className="px-4 py-4 space-y-4">
+        {toast && (
+          <div className="bg-primary text-white text-sm text-center rounded-2xl py-3 shadow-sm">
+            {toast}
+          </div>
+        )}
         {error && (
           <div className="bg-white rounded-2xl p-4 text-center text-sm text-text-sub border border-stone-100">
             {error}
@@ -130,6 +150,32 @@ export default function Feed({ user }) {
 
         {loading && <div className="text-center py-4 text-text-sub text-sm">加载中...</div>}
       </div>
+
+      {filterOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setFilterOpen(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative w-full max-w-md bg-white rounded-t-3xl p-5 pb-8" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-stone-200 rounded-full mx-auto mb-4" />
+            <h3 className="text-base font-semibold text-text-main mb-4">查看范围</h3>
+            <div className="space-y-2">
+              {modes.map(m => (
+                <button
+                  key={m.key}
+                  onClick={() => handleModeChange(m.key)}
+                  className={"w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm " + (mode === m.key ? 'border-primary bg-primary-light text-primary' : 'border-stone-200 text-text-main')}
+                >
+                  <span>{m.label}</span>
+                  {mode === m.key && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

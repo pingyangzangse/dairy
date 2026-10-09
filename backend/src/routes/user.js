@@ -16,6 +16,8 @@ router.get('/api/user/me', auth, defaultLimiter, async (req, res) => {
     const user = rows[0];
     if (!user) return res.status(404).json({ error: '用户不存在' });
     const settings = await diaryQuery('SELECT email_notify FROM user_settings WHERE user_id = ? LIMIT 1', [user.id]);
+    const pointRow = await diaryQuery('SELECT COUNT(*) AS c FROM points WHERE user_id = ?', [user.id]);
+    const todayRow = await diaryQuery('SELECT id FROM points WHERE user_id = ? AND day = CURDATE() LIMIT 1', [user.id]);
     res.json({
       id: user.id,
       username: user.username,
@@ -24,6 +26,8 @@ router.get('/api/user/me', auth, defaultLimiter, async (req, res) => {
       avatar: user.avatar,
       walletAddress: user.wallet_address,
       emailNotify: settings.length === 0 ? true : settings[0].email_notify === 1,
+      points: Number(pointRow[0]?.c || 0),
+      earnedToday: todayRow.length > 0,
     });
   } catch (err) {
     console.error('[api] /user/me error:', err);
@@ -93,11 +97,13 @@ router.get('/api/user/:id', auth, defaultLimiter, async (req, res) => {
     );
     const user = rows[0];
     if (!user) return res.status(404).json({ error: '用户不存在' });
+    const pointRow = await diaryQuery('SELECT COUNT(*) AS c FROM points WHERE user_id = ?', [user.id]);
     res.json({
       id: user.id,
       username: user.username,
       nickName: user.nick_name,
       avatar: user.avatar,
+      points: Number(pointRow[0]?.c || 0),
     });
   } catch (err) {
     console.error('[api] /user/:id error:', err);

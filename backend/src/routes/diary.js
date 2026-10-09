@@ -35,8 +35,22 @@ router.post('/api/diaries', auth, defaultLimiter, async (req, res) => {
       [id, req.user.id, title || null, content, vis, imagesJson]
     );
 
+    // 积分：内容超过 300 字且为今天首次达标 → +1 分（每人每天最多 1 分）
+    let earnedPoint = false;
+    if (String(content).trim().length > 300) {
+      try {
+        await diaryQuery(
+          'INSERT INTO points (id, user_id, diary_id, day) VALUES (?, ?, ?, CURDATE())',
+          [crypto.randomUUID(), req.user.id, id]
+        );
+        earnedPoint = true;
+      } catch (err) {
+        if (err.code !== 'ER_DUP_ENTRY') throw err; // 今天已拿过积分，不重复加
+      }
+    }
+
     const diary = await diaryQueryOne('SELECT * FROM diaries WHERE id = ?', [id]);
-    res.json({ success: true, diary });
+    res.json({ success: true, diary, earnedPoint });
   } catch (err) {
     console.error('[api] POST /diaries error:', err);
     res.status(500).json({ error: err.message });

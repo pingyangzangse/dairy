@@ -210,6 +210,17 @@ export default function Profile({ user, onLogout }) {
           <div>
             <p className="font-medium text-text-main">{profile?.nickName || profile?.username || '未命名'}</p>
             <p className="text-xs text-text-sub">{profile?.email || '未绑定邮箱'}</p>
+            <p className="text-xs mt-1 flex items-center gap-1">
+              <span className="inline-flex items-center gap-0.5 text-secondary font-medium">
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l2.9 6.26L21.5 9.3l-4.75 4.4L18 20.5 12 17.27 6 20.5l1.25-6.8L2.5 9.3l6.6-1.04L12 2z" />
+                </svg>
+                积分 {profile?.points ?? 0}
+              </span>
+              <span className="text-muted">
+                {profile?.earnedToday ? '· 今日已 +1' : '· 写 300 字以上日记，今日 +1'}
+              </span>
+            </p>
           </div>
         </div>
 
