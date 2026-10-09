@@ -20,6 +20,13 @@ export default function Profile({ user, onLogout }) {
   const [notifExpanded, setNotifExpanded] = useState(false)
   const [pushState, setPushState] = useState('loading')
   const [emailNotify, setEmailNotify] = useState(true)
+  const [pointsOpen, setPointsOpen] = useState(false)
+  const [pointsSummary, setPointsSummary] = useState(null)
+  const [adjustDir, setAdjustDir] = useState('add')
+  const [adjustAmount, setAdjustAmount] = useState('')
+  const [adjustReason, setAdjustReason] = useState('')
+  const [adjustLoading, setAdjustLoading] = useState(false)
+  const [adjustError, setAdjustError] = useState('')
   const pendingLinkRef = { current: null }
 
   useEffect(() => {
@@ -61,6 +68,42 @@ export default function Profile({ user, onLogout }) {
     }
     if (n.type === 'comment' && n.diary_id) {
       navigate('/diaries/' + n.diary_id)
+    }
+  }
+
+  async function openPoints() {
+    setPointsOpen(true)
+    setAdjustError('')
+    try {
+      const data = await api.getPointsSummary()
+      setPointsSummary(data)
+    } catch (err) {
+      setAdjustError(err.message)
+    }
+  }
+
+  async function handleAdjust() {
+    const amount = parseInt(adjustAmount, 10)
+    if (!amount || amount < 1) return setAdjustError('请输入正确的积分数量')
+    if (!adjustReason.trim()) return setAdjustError('请填写原因')
+    setAdjustLoading(true)
+    setAdjustError('')
+    try {
+      const data = await api.adjustPoints({
+        amount,
+        direction: adjustDir,
+        reason: adjustReason.trim(),
+      })
+      setAdjustAmount('')
+      setAdjustReason('')
+      const summary = await api.getPointsSummary()
+      setPointsSummary(summary)
+      setProfile(prev => prev ? { ...prev, points: data.balance } : prev)
+      setNotice('积分已更新，当前余额 ' + data.balance + ' 分')
+    } catch (err) {
+      setAdjustError(err.message)
+    } finally {
+      setAdjustLoading(false)
     }
   }
 
@@ -210,7 +253,7 @@ export default function Profile({ user, onLogout }) {
           <div>
             <p className="font-medium text-text-main">{profile?.nickName || profile?.username || '未命名'}</p>
             <p className="text-xs text-text-sub">{profile?.email || '未绑定邮箱'}</p>
-            <p className="text-xs mt-1 flex items-center gap-1">
+            <button onClick={openPoints} className="text-xs mt-1 flex items-center gap-1 text-left">
               <span className="inline-flex items-center gap-0.5 text-secondary font-medium">
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2l2.9 6.26L21.5 9.3l-4.75 4.4L18 20.5 12 17.27 6 20.5l1.25-6.8L2.5 9.3l6.6-1.04L12 2z" />
@@ -220,7 +263,10 @@ export default function Profile({ user, onLogout }) {
               <span className="text-muted">
                 {profile?.earnedToday ? '· 今日已 +1' : '· 写 300 字以上日记，今日 +1'}
               </span>
-            </p>
+              <svg className="w-3 h-3 text-muted" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -371,6 +417,85 @@ export default function Profile({ user, onLogout }) {
           </button>
         </div>
       </div>
+
+      {pointsOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setPointsOpen(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative w-full max-w-md bg-white rounded-t-3xl p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-stone-200 rounded-full mx-auto mb-4" />
+            <h3 className="text-base font-semibold text-text-main mb-4">积分明细</h3>
+
+            <div className="flex gap-3 mb-5">
+              <div className="flex-1 bg-primary-light rounded-2xl p-3 text-center">
+                <p className="text-2xl font-semibold text-primary">{pointsSummary?.balance ?? profile?.points ?? 0}</p>
+                <p className="text-xs text-text-sub mt-0.5">当前余额</p>
+              </div>
+              <div className="flex-1 bg-stone-50 rounded-2xl p-3 text-center">
+                <p className="text-2xl font-semibold text-text-main">{pointsSummary?.earned ?? 0}</p>
+                <p className="text-xs text-text-sub mt-0.5">累计日记得分</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-text-sub mb-2">手动增减（如在外面发了东西，自己记一笔）</p>
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => setAdjustDir('add')}
+                className={"flex-1 py-2 rounded-xl text-sm " + (adjustDir === 'add' ? 'bg-primary text-white' : 'bg-stone-100 text-text-sub')}
+              >
+                增加
+              </button>
+              <button
+                onClick={() => setAdjustDir('spend')}
+                className={"flex-1 py-2 rounded-xl text-sm " + (adjustDir === 'spend' ? 'bg-red-500 text-white' : 'bg-stone-100 text-text-sub')}
+              >
+                消费
+              </button>
+            </div>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="number"
+                min="1"
+                value={adjustAmount}
+                onChange={e => setAdjustAmount(e.target.value)}
+                placeholder="数量"
+                className="w-24 px-3 py-2.5 rounded-xl bg-stone-50 border border-stone-200 text-sm focus:outline-none focus:border-primary"
+              />
+              <input
+                type="text"
+                value={adjustReason}
+                onChange={e => setAdjustReason(e.target.value)}
+                placeholder="原因（必填）"
+                className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-stone-50 border border-stone-200 text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            {adjustError && <p className="text-xs text-red-500 mb-3">{adjustError}</p>}
+            <button
+              onClick={handleAdjust}
+              disabled={adjustLoading}
+              className="w-full py-3 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 mb-5"
+            >
+              {adjustLoading ? '提交中...' : '确认' + (adjustDir === 'add' ? '增加' : '消费')}
+            </button>
+
+            {pointsSummary && pointsSummary.adjustments.length > 0 && (
+              <>
+                <p className="text-xs text-text-sub mb-2">最近记录</p>
+                <div className="space-y-2">
+                  {pointsSummary.adjustments.map(a => (
+                    <div key={a.id} className="flex items-center gap-2 text-xs">
+                      <span className={"font-medium w-10 " + (a.amount > 0 ? 'text-primary' : 'text-red-500')}>
+                        {a.amount > 0 ? '+' + a.amount : a.amount}
+                      </span>
+                      <span className="flex-1 min-w-0 text-text-main truncate">{a.reason}</span>
+                      <span className="text-muted flex-shrink-0">{dayjs(a.created_at).format('MM-DD HH:mm')}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <button
         onClick={onLogout}

@@ -23,6 +23,7 @@ app.use(require('./routes/follow'));
 app.use(require('./routes/feed'));
 app.use(require('./routes/notification'));
 app.use(require('./routes/push'));
+app.use(require('./routes/point'));
 app.use(require('./routes/upload'));
 
 app.get('/api/health', (req, res) => {

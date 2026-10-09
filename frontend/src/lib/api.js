@@ -60,6 +60,10 @@ export const api = {
   me: () => request('/api/user/me'),
   updateProfile: (body) => request('/api/user/profile', { method: 'PATCH', body: JSON.stringify(body) }),
   updateSettings: (body) => request('/api/user/settings', { method: 'PATCH', body: JSON.stringify(body) }),
+
+  // Points
+  getPointsSummary: () => request('/api/points/summary'),
+  adjustPoints: (body) => request('/api/points/adjust', { method: 'POST', body: JSON.stringify(body) }),
   searchUser: (email) => request('/api/user/search?email=' + encodeURIComponent(email)),
   getUser: (id) => request('/api/user/' + id),
   getUserDiaries: (id, { date, visibility } = {}) => {

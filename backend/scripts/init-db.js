@@ -73,6 +73,15 @@ CREATE TABLE IF NOT EXISTS points (
   INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS point_adjustments (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL,
+  amount INT NOT NULL COMMENT '正数为增加，负数为消费',
+  reason VARCHAR(128) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id VARCHAR(64) PRIMARY KEY,
   email_notify TINYINT(1) NOT NULL DEFAULT 1 COMMENT '邮件提醒开关',
